@@ -1,0 +1,71 @@
+module PaymentReceiver where
+
+import DA.Map qualified as Map (lookup)
+import DA.Map (Map)
+import DA.Optional (fromSome)
+
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), InstrumentKey)
+
+import TransferRequest (TransferRequest(..), Accept(..))
+
+template AccessGrant
+  with
+    receiver : Party
+    payer : Party
+    resource : Text
+    sessionId : Text
+    grantedAt : Time
+  where
+    signatory receiver, payer
+
+    key (receiver, sessionId) : (Party, Text)
+    maintainer key._1
+
+    choice ConsumeAccess : ()
+      controller receiver
+      do
+        pure ()
+
+template PaymentReceiver
+  with
+    receiver : Party
+    receiverAccount : AccountKey
+    instrumentKey : InstrumentKey
+    prices : Map Text Decimal
+    publicParty : Party
+  where
+    signatory receiver
+    observer publicParty
+
+    key receiver : Party
+    maintainer key
+
+    nonconsuming choice Pay : ContractId AccessGrant
+      with
+        payer : Party
+        sessionId : Text
+        resource : Text
+        maxPrice : Decimal
+        holdingCid : ContractId Holding.I
+      controller payer
+      do
+        let price = fromSome $ Map.lookup resource prices
+        assertMsg "Price exceeds maximum agreed amount" (price <= maxPrice)
+
+        transferReqCid <- create TransferRequest with
+          receiverAccount
+          instrument = instrumentKey
+          amount = price
+          currentOwner = payer
+
+        _ <- exercise transferReqCid Accept with holdingCid
+
+        currentTime <- getTime
+        create AccessGrant with
+          receiver
+          payer
+          resource
+          sessionId
+          grantedAt = currentTime
+

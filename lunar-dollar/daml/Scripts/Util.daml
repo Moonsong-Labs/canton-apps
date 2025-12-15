@@ -1,0 +1,66 @@
+module Scripts.Util where
+
+import Daml.Script
+
+-- INTERFACE DEPENDENCIES --
+import Daml.Finance.Interface.Account.V4.Factory qualified as AccountFactory (I)
+import Daml.Finance.Interface.Holding.V4.Factory qualified as HoldingFactory (I, Reference(..))
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey, HoldingFactoryKey(..), Id(..))
+import LunarDollar qualified
+
+-- IMPLEMENTATION DEPENDENCIES --
+import Daml.Finance.Holding.V4.Factory qualified as Holding (Factory(..))
+
+import Workflow.CreateAccount qualified as CreateAccount (Accept(..), Request(..))
+
+-- | Looks up an existing party by display name.
+lookupParty : Text -> Script Party
+lookupParty name = do
+  parties <- listKnownParties
+  case filter (\p -> p.displayName == Some name) parties of
+    (p :: _) -> pure p.party
+    [] -> fail $ "Party not found: " <> name
+
+-- | Creates a user + party given a hint.
+createParty : Text -> Script Party
+createParty name = do
+  party <- allocatePartyWithHint name $ PartyIdHint name
+  userId <- validateUserId name
+  createUser (User userId (Some party)) [CanActAs party]
+  pure party
+
+getLNRD : Script (ContractId LunarDollar.LunarDollar, LunarDollar.LunarDollar)
+getLNRD = do
+  bank <- lookupParty "Bank"
+  Some (cid, lunarDollar) <- queryContractKey @LunarDollar.LunarDollar bank (bank, Id "LNRD", "0")
+  pure (cid, lunarDollar)
+
+-- | Create a holding factory as well as the companion `Reference` template, that is explained here:
+-- https://docs.daml.com/daml-finance/reference/patterns.html#reference-pattern
+createHoldingFactory : Holding.Factory -> Script HoldingFactoryKey
+createHoldingFactory holdingFactory = do
+  cid <- toInterfaceContractId @HoldingFactory.I <$> submit holdingFactory.provider do
+    createCmd holdingFactory
+  submit holdingFactory.provider do
+    createCmd HoldingFactory.Reference with
+      factoryView = view $ toInterface @HoldingFactory.I holdingFactory
+      cid
+      observers = holdingFactory.observers
+  pure $ HoldingFactoryKey with provider = holdingFactory.provider; id = holdingFactory.id
+
+createBankAccount : Party -> HoldingFactoryKey -> ContractId AccountFactory.I -> Party -> Text -> [Party] -> Script AccountKey
+createBankAccount accountProvider holdingFactory accountFactoryCid accountHolder id observers = do
+  requestCid <- submit accountHolder do
+    createCmd CreateAccount.Request with
+      owner = accountHolder
+      custodian = accountProvider
+  
+  accountKey <- submit accountProvider do
+    exerciseCmd requestCid CreateAccount.Accept with
+      label = id
+      description = id
+      accountFactoryCid
+      holdingFactory
+      observers
+  
+  pure accountKey

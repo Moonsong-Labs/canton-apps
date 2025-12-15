@@ -1,0 +1,128 @@
+module Scripts.X402 where
+
+import Daml.Script
+import DA.Foldable (forA_)
+import DA.Map (Map)
+
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), Id(..))
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+
+import PaymentReceiver (PaymentReceiver(..), AccessGrant(..), Pay(..))
+import Scripts.Util (lookupParty, getLNRD)
+
+data SetupReceiverArgs = SetupReceiverArgs with
+  receiver : Text
+  prices : Map Text Decimal
+  publicParty : Party
+
+setupReceiver : SetupReceiverArgs -> Script (ContractId PaymentReceiver)
+setupReceiver args = do
+  bank <- lookupParty "Bank"
+  receiver <- lookupParty args.receiver
+  (_, lnrd) <- getLNRD
+
+  let
+    receiverAccount = AccountKey with
+      custodian = bank
+      owner = receiver
+      id = Id (args.receiver <> "'s Account")
+
+  receiverCid <- submit receiver do
+    createCmd PaymentReceiver with
+      receiver
+      receiverAccount
+      instrumentKey = lnrd.instrumentKey
+      prices = args.prices
+      publicParty = args.publicParty
+
+  debug $ "Created PaymentReceiver for " <> args.receiver
+  pure receiverCid
+
+data PayArgs = PayArgs with
+  payer : Text
+  receiver : Text
+  receiverCid : ContractId PaymentReceiver
+  sessionId : Text
+  resource : Text
+  maxPrice : Decimal
+  holdingCid : ContractId Holding.I
+
+pay : PayArgs -> Script (ContractId AccessGrant)
+pay args = do
+  payer <- lookupParty args.payer
+  receiver <- lookupParty args.receiver
+
+  accessGrantCid <- submitMulti [payer] [receiver] do
+    exerciseCmd args.receiverCid Pay with
+      payer
+      sessionId = args.sessionId
+      resource = args.resource
+      maxPrice = args.maxPrice
+      holdingCid = args.holdingCid
+
+  debug $ "Payment successful! AccessGrant created for session " <> args.sessionId
+  pure accessGrantCid
+
+data QueryResult = QueryResult with
+  receiverCid : ContractId PaymentReceiver
+  holdingCid : ContractId Holding.I
+    deriving (Show)
+
+queryContracts : Text -> Script QueryResult
+queryContracts payerName = do
+  payer <- lookupParty payerName
+  
+  [(receiverCid, _)] <- query @PaymentReceiver payer
+  [(holdingCid, _)] <- queryInterface @Holding.I payer
+  
+  debug $ "PaymentReceiver CID: " <> show receiverCid
+  debug $ "Holding CID: " <> show holdingCid
+  
+  pure QueryResult with receiverCid, holdingCid
+
+fetchAccessGrants : Text -> Script ()
+fetchAccessGrants partyName = do
+  party <- lookupParty partyName
+  grants <- query @AccessGrant party
+  debug $ "=== AccessGrants visible to " <> partyName <> " ==="
+  debug $ "Found " <> show (length grants) <> " AccessGrant(s)"
+  forA_ grants \(cid, grant) -> do
+    debug $ "  CID: " <> show cid
+    debug $ "  Receiver: " <> show grant.receiver
+    debug $ "  Payer: " <> show grant.payer
+    debug $ "  Resource: " <> grant.resource
+    debug $ "  SessionId: " <> grant.sessionId
+    debug $ "  GrantedAt: " <> show grant.grantedAt
+    debug "  ---"
+  pure ()
+
+data DoPaymentArgs = DoPaymentArgs with
+  payer : Text
+  resource : Text
+  maxPrice : Decimal
+  sessionId : Text
+  receiverCid : ContractId PaymentReceiver
+
+doPayment : DoPaymentArgs -> Script (ContractId AccessGrant)
+doPayment args = do
+  payer <- lookupParty args.payer
+  
+  holdings <- queryInterface @Holding.I payer
+  case holdings of
+    [] -> error "No holdings found for payer"
+    ((holdingCid, _) :: _) -> do
+      Some receiver <- queryContractId payer args.receiverCid
+      
+      accessGrantCid <- submitMulti [payer] [receiver.receiver] do
+        exerciseCmd args.receiverCid Pay with
+          payer
+          sessionId = args.sessionId
+          resource = args.resource
+          maxPrice = args.maxPrice
+          holdingCid
+      
+      debug $ "Payment successful!"
+      debug $ "  Session: " <> args.sessionId
+      debug $ "  Resource: " <> args.resource
+      debug $ "  AccessGrant: " <> show accessGrantCid
+      pure accessGrantCid

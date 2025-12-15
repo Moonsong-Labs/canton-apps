@@ -1,0 +1,59 @@
+module Scripts.Transfer where
+
+import Daml.Script
+
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), Id(..))
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+
+import Scripts.Util (lookupParty, getLNRD)
+import TransferRequest (TransferRequest(..), Accept(..))
+
+data CreateTransferRequestArgs = CreateTransferRequestArgs with
+  sender : Text
+  receiver : Text
+  amount : Decimal
+
+createTransferRequest : CreateTransferRequestArgs -> Script (ContractId TransferRequest.TransferRequest)
+createTransferRequest args = do
+  sender <- lookupParty args.sender
+  bank <- lookupParty "Bank"
+  receiver <- lookupParty args.receiver
+  (_, lunarDollar) <- getLNRD
+
+  let instrumentKey = lunarDollar.instrumentKey
+
+  let
+    receiverAccount = AccountKey with
+      custodian = bank
+      owner = receiver
+      id = Id (args.receiver <> "'s Account")
+  
+  requestCid <- submit receiver do
+    createCmd TransferRequest.TransferRequest with
+      receiverAccount
+      instrument = instrumentKey
+      amount = args.amount
+      currentOwner = sender
+
+  debug $ "Created transfer request " <> show requestCid <> " from " <> args.sender <> " to " <> args.receiver <> " for " <> show args.amount <> " LNRD"
+  
+  pure requestCid
+
+data AcceptTransferRequestArgs = AcceptTransferRequestArgs with
+  sender : Text
+  receiver : Text
+  requestCid : ContractId TransferRequest.TransferRequest
+  holdingCid : ContractId Holding.I
+
+acceptTransferRequest : AcceptTransferRequestArgs -> Script (ContractId Holding.I)
+acceptTransferRequest args = do
+  sender <- lookupParty args.sender
+  receiver <- lookupParty args.receiver
+  newHoldingCid <- submit sender do
+    exerciseCmd args.requestCid TransferRequest.Accept with
+      holdingCid = args.holdingCid
+
+  debug $ "Accepted transfer request from " <> args.sender <> " to " <> args.receiver
+  
+  pure newHoldingCid
+  

@@ -1,0 +1,6 @@
+.daml/
+.vscode/
+log/
+navigator.log
+.cli-state.json
+.lib/
