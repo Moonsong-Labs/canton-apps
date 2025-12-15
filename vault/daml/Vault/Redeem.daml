@@ -1,0 +1,74 @@
+module Vault.Redeem where
+
+import DA.Action (when)
+import Vault.Config (VaultConfig)
+import Vault.State (VaultState, ProcessRedemption(..))
+
+import Daml.Finance.Interface.Account.V4.Account qualified as Account (Credit(..), Debit(..), I, exerciseInterfaceByKey)
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey, Id)
+import Daml.Finance.Interface.Util.V3.Common (qty)
+
+template RedeemRequest
+  with
+    redeemer : Party
+    redeemerAccount : AccountKey
+    operator : Party
+    custodian : Party
+    vaultId : Id
+    sharesAmount : Decimal
+    shareHoldingCid : ContractId Holding.I
+  where
+    signatory redeemer
+    observer operator, custodian
+
+    ensure sharesAmount > 0.0
+
+    choice Accept : (ContractId VaultState, ContractId Holding.I)
+      controller operator, custodian
+      do
+        -- Fetch vault configuration
+        (_, vaultConfig) <- fetchByKey @VaultConfig (operator, vaultId)
+
+        -- Step 1: Burn shares
+        Account.exerciseInterfaceByKey @Account.I
+          redeemerAccount
+          custodian
+          Account.Debit with
+            holdingCid = shareHoldingCid
+
+        -- Step 2: Process redemption - calculates redemption amount based on share price
+        (stateCid, _) <- fetchByKey @VaultState (operator, vaultId)
+        (newStateCid, redemptionAmount) <- exercise stateCid ProcessRedemption with
+          sharesToBurn = sharesAmount
+
+        -- Step 3: Calculate fee
+        let feeAmount = redemptionAmount * vaultConfig.baseFee
+        let userAmount = redemptionAmount - feeAmount
+
+        -- Step 4: Credit stablecoin to user's account (minus fee)
+        stablecoinHoldingCid <- Account.exerciseInterfaceByKey @Account.I
+          redeemerAccount
+          custodian
+          Account.Credit with
+            quantity = qty userAmount vaultConfig.depositInstrument
+
+        -- Step 5: Credit fee to treasury (if any)
+        when (feeAmount > 0.0) do
+          _ <- Account.exerciseInterfaceByKey @Account.I
+            vaultConfig.treasuryAccount
+            custodian
+            Account.Credit with
+              quantity = qty feeAmount vaultConfig.depositInstrument
+          pure ()
+
+        pure (newStateCid, stablecoinHoldingCid)
+
+    choice Decline : ()
+      controller operator
+      do pure ()
+
+    choice Cancel : ()
+      controller redeemer
+      do pure ()
+

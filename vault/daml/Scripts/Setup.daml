@@ -1,0 +1,205 @@
+module Scripts.Setup where
+
+import Daml.Script
+import Daml.Finance.Interface.Account.V4.Factory qualified as AccountFactory (I)
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+import Daml.Finance.Interface.Instrument.Token.V4.Factory qualified as TokenFactory (Create(..), I)
+import Daml.Finance.Interface.Instrument.Token.V4.Types (Token(..))
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey, HoldingStandard(..), Id(..), InstrumentKey(..))
+import Daml.Finance.Account.V4.Account qualified as Account (Factory(..))
+import Daml.Finance.Holding.V4.Factory qualified as Holding (Factory(..))
+import Daml.Finance.Instrument.Token.V4.Factory qualified as Token (Factory(..))
+import Workflow.CreateAccount qualified as CreateAccount (Accept(..), Request(..))
+import Workflow.CreditAccount qualified as CreditAccount (Accept(..), Request(..))
+import Vault.Config (VaultConfig(..))
+import Vault.State (VaultState(..))
+import Scripts.Util (createHoldingFactory, createParty, getPartyByName)
+
+-- | Setup script: creates parties, factories, instruments, accounts, and vault state.
+setupVault : Script VaultTestState
+setupVault = do
+  -- Create parties
+  [alice, vault] <- mapA createParty ["Alice", "Vault"]
+
+  -- Create factories
+  accountFactoryCid <- toInterfaceContractId @AccountFactory.I <$> submit vault do
+    createCmd Account.Factory with provider = vault; observers = mempty
+
+  holdingFactory <- createHoldingFactory
+    Holding.Factory with provider = vault; id = Id "Holding Factory"; observers = mempty
+
+  tokenFactoryCid <- toInterfaceContractId @TokenFactory.I <$> submit vault do
+    createCmd Token.Factory with provider = vault; observers = mempty
+
+  -- Create instruments
+  now <- getTime
+
+  let depositInstrument = InstrumentKey with
+        issuer = vault; depository = vault; id = Id "USD"; version = "0"; holdingStandard = TransferableFungible
+
+  submit vault do
+    exerciseCmd tokenFactoryCid TokenFactory.Create with
+      token = Token with instrument = depositInstrument; description = "USD Stablecoin"; validAsOf = now
+      observers = mempty
+
+  let shareInstrument = InstrumentKey with
+        issuer = vault; depository = vault; id = Id "VAULT-SHARE"; version = "0"; holdingStandard = TransferableFungible
+
+  submit vault do
+    exerciseCmd tokenFactoryCid TokenFactory.Create with
+      token = Token with instrument = shareInstrument; description = "Vault Share Token"; validAsOf = now
+      observers = mempty
+
+  -- Create accounts
+  aliceRequestCid <- submit alice do
+    createCmd CreateAccount.Request with owner = alice; custodian = vault
+
+  aliceAccount <- submit vault do
+    exerciseCmd aliceRequestCid CreateAccount.Accept with
+      label = "Alice@Vault"; description = "Alice's account at Vault"
+      accountFactoryCid; holdingFactory; observers = []
+
+  treasuryRequestCid <- submit vault do
+    createCmd CreateAccount.Request with owner = vault; custodian = vault
+
+  treasuryAccount <- submit vault do
+    exerciseCmd treasuryRequestCid CreateAccount.Accept with
+      label = "Treasury@Vault"; description = "Vault Treasury Account"
+      accountFactoryCid; holdingFactory; observers = [alice]
+
+  -- Credit Alice with 1,000 USD
+  aliceCreditRequestCid <- submit alice do
+    createCmd CreditAccount.Request with account = aliceAccount; instrument = depositInstrument; amount = 1000.0
+
+  aliceHoldingCid <- submit vault do
+    exerciseCmd aliceCreditRequestCid CreditAccount.Accept
+
+  -- Fund treasury with 10,000 USD
+  let treasuryInitialFunding = 10000.0
+
+  treasuryCreditRequestCid <- submit vault do
+    createCmd CreditAccount.Request with account = treasuryAccount; instrument = depositInstrument; amount = treasuryInitialFunding
+
+  submit vault do
+    exerciseCmd treasuryCreditRequestCid CreditAccount.Accept
+
+  -- Create vault config and state
+  let vaultId = Id "vault-101"
+
+  vaultConfigCid <- submit vault do
+    createCmd VaultConfig with
+      operator = vault; custodian = vault; vaultId = vaultId
+      name = "Test Vault"; description = "A test vault for stablecoin deposits"
+      depositInstrument; shareInstrument; treasuryAccount
+      minDepositAmount = 100.0; baseFee = 0.01; observers = [alice]
+
+  submit vault do
+    createCmd VaultState with
+      operator = vault; custodian = vault; vaultId = vaultId
+      configCid = vaultConfigCid; totalAssets = treasuryInitialFunding
+      totalShares = 0.0; sharePrice = 1.0; observers = [alice]
+
+  pure VaultTestState with
+    alice; vault; aliceAccount; treasuryAccount
+    depositInstrument; shareInstrument; vaultId; vaultConfigCid; aliceHoldingCid
+
+-- | Setup script using existing parties (for when parties are already allocated)
+setupVaultExisting : Script VaultTestState
+setupVaultExisting = do
+  -- Get existing parties
+  alice <- getPartyByName "Alice"
+  vault <- getPartyByName "Vault"
+
+  -- Create factories
+  accountFactoryCid <- toInterfaceContractId @AccountFactory.I <$> submit vault do
+    createCmd Account.Factory with provider = vault; observers = mempty
+
+  holdingFactory <- createHoldingFactory
+    Holding.Factory with provider = vault; id = Id "Holding Factory"; observers = mempty
+
+  tokenFactoryCid <- toInterfaceContractId @TokenFactory.I <$> submit vault do
+    createCmd Token.Factory with provider = vault; observers = mempty
+
+  -- Create instruments
+  now <- getTime
+
+  let depositInstrument = InstrumentKey with
+        issuer = vault; depository = vault; id = Id "USD"; version = "0"; holdingStandard = TransferableFungible
+
+  submit vault do
+    exerciseCmd tokenFactoryCid TokenFactory.Create with
+      token = Token with instrument = depositInstrument; description = "USD Stablecoin"; validAsOf = now
+      observers = mempty
+
+  let shareInstrument = InstrumentKey with
+        issuer = vault; depository = vault; id = Id "VAULT-SHARE"; version = "0"; holdingStandard = TransferableFungible
+
+  submit vault do
+    exerciseCmd tokenFactoryCid TokenFactory.Create with
+      token = Token with instrument = shareInstrument; description = "Vault Share Token"; validAsOf = now
+      observers = mempty
+
+  -- Create accounts
+  aliceRequestCid <- submit alice do
+    createCmd CreateAccount.Request with owner = alice; custodian = vault
+
+  aliceAccount <- submit vault do
+    exerciseCmd aliceRequestCid CreateAccount.Accept with
+      label = "Alice@Vault"; description = "Alice's account at Vault"
+      accountFactoryCid; holdingFactory; observers = []
+
+  treasuryRequestCid <- submit vault do
+    createCmd CreateAccount.Request with owner = vault; custodian = vault
+
+  treasuryAccount <- submit vault do
+    exerciseCmd treasuryRequestCid CreateAccount.Accept with
+      label = "Treasury@Vault"; description = "Vault Treasury Account"
+      accountFactoryCid; holdingFactory; observers = [alice]
+
+  -- Credit Alice with 1,000 USD
+  aliceCreditRequestCid <- submit alice do
+    createCmd CreditAccount.Request with account = aliceAccount; instrument = depositInstrument; amount = 1000.0
+
+  aliceHoldingCid <- submit vault do
+    exerciseCmd aliceCreditRequestCid CreditAccount.Accept
+
+  -- Fund treasury with 10,000 USD
+  let treasuryInitialFunding = 10000.0
+  
+  treasuryCreditRequestCid <- submit vault do
+    createCmd CreditAccount.Request with account = treasuryAccount; instrument = depositInstrument; amount = treasuryInitialFunding
+
+  submit vault do
+    exerciseCmd treasuryCreditRequestCid CreditAccount.Accept
+
+  -- Create vault config and state
+  let vaultId = Id "vault-101"
+
+  vaultConfigCid <- submit vault do
+    createCmd VaultConfig with
+      operator = vault; custodian = vault; vaultId = vaultId
+      name = "Test Vault"; description = "A test vault for stablecoin deposits"
+      depositInstrument; shareInstrument; treasuryAccount
+      minDepositAmount = 100.0; baseFee = 0.01; observers = [alice]
+
+  submit vault do
+    createCmd VaultState with
+      operator = vault; custodian = vault; vaultId = vaultId
+      configCid = vaultConfigCid; totalAssets = treasuryInitialFunding
+      totalShares = 0.0; sharePrice = 1.0; observers = [alice]
+
+  pure VaultTestState with
+    alice; vault; aliceAccount; treasuryAccount
+    depositInstrument; shareInstrument; vaultId; vaultConfigCid; aliceHoldingCid
+
+data VaultTestState = VaultTestState
+  with
+    alice : Party
+    vault : Party
+    aliceAccount : AccountKey
+    treasuryAccount : AccountKey
+    depositInstrument : InstrumentKey
+    shareInstrument : InstrumentKey
+    vaultId : Id
+    vaultConfigCid : ContractId VaultConfig
+    aliceHoldingCid : ContractId Holding.I

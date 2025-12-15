@@ -1,0 +1,46 @@
+module Scripts.VaultDeposit where
+
+import Daml.Script
+import Daml.Finance.Interface.Types.Common.V3.Types (Id(..), InstrumentKey(..), HoldingStandard(..), AccountKey(..))
+import Vault.Deposit (DepositRequest(..), Accept(..))
+import Scripts.Util (getPartyByName, getHoldingByInstrument)
+
+-- | Deposit script. Assumes Setup has already run.
+deposit : Script ()
+deposit = do
+  alice <- getPartyByName "Alice"
+  vault <- getPartyByName "Vault"
+  let vaultId = Id "vault-101"
+
+  let
+    depositInstrument = InstrumentKey with
+      issuer = vault
+      depository = vault
+      id = Id "USD"
+      version = "0"
+      holdingStandard = TransferableFungible
+      
+    aliceAccount = AccountKey with
+      custodian = vault
+      owner = alice
+      id = Id "Alice@Vault"
+
+  holdingCid <- getHoldingByInstrument alice depositInstrument
+
+  let depositAmount = 500.0
+  
+  depositRequestCid <- submit alice do
+    createCmd DepositRequest with
+      depositor = alice
+      depositorAccount = aliceAccount
+      operator = vault
+      custodian = vault
+      vaultId = vaultId
+      amount = depositAmount
+      depositHoldingCid = holdingCid
+
+  submit vault do
+    exerciseCmd depositRequestCid Accept
+    
+  debug "=== Deposit Complete ==="
+  debug $ "Alice deposited: " <> show depositAmount <> " USD"
