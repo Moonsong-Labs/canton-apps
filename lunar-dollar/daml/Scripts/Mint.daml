@@ -1,0 +1,35 @@
+module Scripts.Mint where
+
+import Daml.Script
+
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), Id(..))
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+
+import LunarDollar qualified
+import Scripts.Util (lookupParty, getLNRD)
+
+data MintArgs = MintArgs with
+  recipient : Text
+  amount : Decimal
+
+mint : MintArgs -> Script (ContractId Holding.I)
+mint args = do
+  bank <- lookupParty "Bank"
+  recipient <- lookupParty args.recipient
+
+  let
+    recipientAccount = AccountKey with
+      custodian = bank
+      owner = recipient
+      id = Id (args.recipient <> "'s Account")
+
+  (lnrdCid, _) <- getLNRD
+  
+  holdingCid <- submitMulti [bank, recipient] [] do
+    exerciseCmd lnrdCid LunarDollar.Mint with
+      amount = args.amount
+      recipientAccount
+
+  debug $ "Minted " <> show args.amount <> " LNRD to " <> args.recipient <> " as holding " <> show holdingCid
+
+  pure holdingCid

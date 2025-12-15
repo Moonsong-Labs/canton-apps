@@ -1,0 +1,40 @@
+module LunarDollar where
+
+import Daml.Finance.Interface.Account.V4.Account qualified as Account (Credit(..), I, exerciseInterfaceByKey)
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+import Daml.Finance.Interface.Holding.V4.Fungible qualified as Fungible (I, Merge(..))
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), Id(..), InstrumentKey)
+import Daml.Finance.Interface.Util.V3.Common (qty)
+
+template LunarDollar with
+    instrumentKey : InstrumentKey
+  where
+    signatory instrumentKey.issuer
+    observer instrumentKey.depository
+
+    key (instrumentKey.issuer, instrumentKey.id, instrumentKey.version) : (Party, Id, Text)
+    maintainer key._1
+
+    nonconsuming choice Mint : ContractId Holding.I
+      with
+        amount : Decimal
+        recipientAccount : AccountKey
+      controller instrumentKey.issuer, recipientAccount.owner
+      do
+        Account.exerciseInterfaceByKey @Account.I recipientAccount recipientAccount.owner Account.Credit with
+          quantity = qty amount instrumentKey
+
+    nonconsuming choice Merge : ContractId Holding.I
+      with
+        owner : Party
+        holdingCids : [ContractId Holding.I]
+      controller instrumentKey.issuer, owner
+      do
+        case holdingCids of
+          [] -> abort "No holdings to merge"
+          [single] -> pure single
+          (first :: rest) -> do
+            let fungibleCid = coerceInterfaceContractId @Fungible.I first
+            let restFungibleCids = map (coerceInterfaceContractId @Fungible.I) rest
+            mergedCid <- exercise fungibleCid Fungible.Merge with fungibleCids = restFungibleCids
+            pure $ toInterfaceContractId @Holding.I mergedCid

@@ -1,0 +1,28 @@
+module Scripts.Merge where
+
+import Daml.Script
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+
+import LunarDollar qualified
+import Scripts.Util (lookupParty, getLNRD)
+
+data MergeArgs = MergeArgs with
+  party : Text
+
+merge : MergeArgs -> Script (ContractId Holding.I)
+merge args = do
+  party <- lookupParty args.party
+  bank <- lookupParty "Bank"
+  (lnrdCid, _) <- getLNRD
+  
+  holdings <- queryInterface @Holding.I party
+  let cids = map fst holdings
+
+  mergedCid <- submitMulti [bank, party] [] do
+    exerciseCmd lnrdCid LunarDollar.Merge with
+      owner = party
+      holdingCids = cids
+
+  debug $ "Merged " <> show (length cids) <> " holdings into " <> show mergedCid
+  
+  pure mergedCid
