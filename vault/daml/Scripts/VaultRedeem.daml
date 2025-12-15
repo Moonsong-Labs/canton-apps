@@ -1,0 +1,76 @@
+module Scripts.VaultRedeem where
+
+import Daml.Script
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (GetView(..))
+import Daml.Finance.Interface.Types.Common.V3.Types (Id(..), InstrumentKey(..), AccountKey(..), HoldingStandard(..))
+import Vault.State (VaultState(..))
+import Vault.Config (VaultConfig(..))
+import Vault.Redeem (RedeemRequest(..), Accept(..))
+import Scripts.Util (getPartyByName, getHoldingWithView)
+
+-- | Redeem script. Assumes Deposit has already run.
+redeem : Script ()
+redeem = do
+  alice <- getPartyByName "Alice"
+  vault <- getPartyByName "Vault"
+  let vaultId = Id "vault-101"
+
+  let
+    shareInstrument = InstrumentKey with
+      issuer = vault
+      depository = vault
+      id = Id "VAULT-SHARE"
+      version = "0"
+      holdingStandard = TransferableFungible
+      
+    depositInstrument = InstrumentKey with
+      issuer = vault
+      depository = vault
+      id = Id "USD"
+      version = "0"
+      holdingStandard = TransferableFungible
+      
+    aliceAccount = AccountKey with
+      custodian = vault
+      owner = alice
+      id = Id "Alice@Vault"
+
+  (shareHoldingCid, shareHoldingView) <- getHoldingWithView alice shareInstrument
+
+  debug $ "Found share holding: " <> show shareHoldingView.amount
+
+  let redeemAmount = shareHoldingView.amount / 2.0
+  
+  redeemRequestCid <- submit alice do
+    createCmd RedeemRequest with
+      redeemer = alice
+      redeemerAccount = aliceAccount
+      operator = vault
+      custodian = vault
+      vaultId = vaultId
+      sharesAmount = redeemAmount
+      shareHoldingCid = shareHoldingCid
+
+  (_newStateCid, aliceStablecoinHoldingCid) <- submit vault do
+    exerciseCmd redeemRequestCid Accept
+
+  stablecoinView <- submit alice do
+    exerciseCmd aliceStablecoinHoldingCid Holding.GetView with viewer = alice
+
+  assertMsg "Holding should be USD instrument" (stablecoinView.instrument == depositInstrument)
+
+  Some (_, vaultConfig) <- queryContractKey @VaultConfig vault (vault, vaultId)
+  Some (_, vaultState) <- queryContractKey @VaultState vault (vault, vaultId)
+
+  -- Calculate expected user amount after fee
+  let redemptionAmount = redeemAmount * vaultState.sharePrice
+  let expectedUserAmount = redemptionAmount * (1.0 - vaultConfig.baseFee)
+
+  assertMsg "User should receive redemption minus fee" (stablecoinView.amount == expectedUserAmount)
+
+  debug "=== Redemption Complete ==="
+  debug $ "Alice redeemed: " <> show redeemAmount <> " shares"
+  debug $ "Redemption amount (before fee): " <> show redemptionAmount <> " USD"
+  debug $ "Fee (" <> show (vaultConfig.baseFee * 100.0) <> "%): " <> show (redemptionAmount * vaultConfig.baseFee) <> " USD"
+  debug $ "Alice received: " <> show stablecoinView.amount <> " USD"
+  debug $ "Share Price: " <> show vaultState.sharePrice

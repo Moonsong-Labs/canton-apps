@@ -1,0 +1,64 @@
+module Vault.Deposit where
+
+import DA.Set (fromList)
+
+import Vault.Config (VaultConfig)
+import Vault.State (VaultState, ProcessDeposit(..))
+
+import Daml.Finance.Interface.Account.V4.Account qualified as Account (Credit(..), I, exerciseInterfaceByKey)
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+import Daml.Finance.Interface.Holding.V4.Transferable qualified as Transferable (Transfer(..), I)
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey, Id)
+import Daml.Finance.Interface.Util.V3.Common (qty)
+
+template DepositRequest
+  with
+    depositor : Party
+    depositorAccount : AccountKey
+    operator : Party
+    custodian : Party
+    vaultId : Id
+    amount : Decimal
+    depositHoldingCid : ContractId Holding.I
+  where
+    signatory depositor
+    observer operator, custodian
+
+    ensure amount > 0.0
+
+    choice Accept : (ContractId VaultState, ContractId Holding.I)
+      controller operator, custodian
+      do
+        (_, vaultConfig) <- fetchByKey @VaultConfig (operator, vaultId)
+
+        -- Check that amount is more than the minimum deposit amount
+        assertMsg "Deposit amount below minimum" (amount >= vaultConfig.minDepositAmount)
+
+        -- Step 1: Transfer deposited funds to treasury account
+        let transferableCid = coerceInterfaceContractId @Transferable.I depositHoldingCid
+        _treasuryHoldingCid <- exercise transferableCid Transferable.Transfer with
+          actors = fromList [depositor, custodian]
+          newOwnerAccount = vaultConfig.treasuryAccount
+
+        -- Step 2: Process deposit and get amount of shares to mint      
+        (stateCid, _) <- fetchByKey @VaultState (operator, vaultId)
+
+        (newStateCid, sharesToMint) <- exercise stateCid ProcessDeposit with
+          depositAmount = amount
+
+        -- Step 3: Mint shares to depositor
+        shareHoldingCid <- Account.exerciseInterfaceByKey @Account.I
+          depositorAccount
+          custodian
+          Account.Credit with
+            quantity = qty sharesToMint vaultConfig.shareInstrument
+
+        pure (newStateCid, shareHoldingCid)
+
+    choice Decline : ()
+      controller operator
+      do pure ()
+
+    choice Cancel : ()
+      controller depositor
+      do pure ()

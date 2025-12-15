@@ -1,0 +1,25 @@
+module Vault.Config where
+
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), InstrumentKey, Id)
+
+type VaultConfigKey = (Party, Id)  -- (operator, vaultId)
+
+template VaultConfig
+  with
+    operator : Party
+    custodian : Party
+    vaultId : Id  -- UUID identifier for this vault
+    name : Text  -- human-readable vault name
+    description : Text  -- vault description
+    depositInstrument : InstrumentKey
+    shareInstrument : InstrumentKey
+    treasuryAccount : AccountKey
+    minDepositAmount : Decimal
+    baseFee : Decimal
+    observers : [Party]
+  where
+    signatory operator, custodian
+    observer observers
+
+    key (operator, vaultId) : VaultConfigKey
+    maintainer key._1  -- operator maintains the key

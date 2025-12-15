@@ -1,0 +1,24 @@
+module Scripts.UpdatePrice where
+
+import Daml.Script
+import Vault.State (VaultState, UpdateSharePrice(..))
+import Daml.Finance.Interface.Types.Common.V3.Types (Id(..))
+import Scripts.Util (getPartyByName)
+
+data UpdatePriceInput = UpdatePriceInput
+  with
+    vaultPartyName : Text
+    vaultId : Text
+    newPrice : Decimal
+  deriving (Show)
+
+-- | Updates share price for a specific vault.
+updateSharePrice : UpdatePriceInput -> Script ()
+updateSharePrice input = do
+  vault <- getPartyByName input.vaultPartyName
+  let vaultIdKey = Id input.vaultId
+  
+  Some (stateCid, _) <- queryContractKey @VaultState vault (vault, vaultIdKey)
+  submit vault do
+    exerciseCmd stateCid UpdateSharePrice with newSharePrice = input.newPrice
+  debug $ "Updated share price to: " <> show input.newPrice <> " for vault: " <> input.vaultId

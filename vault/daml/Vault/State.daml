@@ -1,0 +1,63 @@
+module Vault.State where
+
+import Vault.Config (VaultConfig)
+import Daml.Finance.Interface.Types.Common.V3.Types (Id)
+
+type VaultStateKey = (Party, Id)
+
+template VaultState
+  with
+    operator : Party
+    custodian : Party
+    vaultId : Id
+    configCid : ContractId VaultConfig
+    totalAssets : Decimal
+    totalShares : Decimal
+    sharePrice : Decimal
+    observers : [Party]
+  where
+    signatory operator, custodian
+    observer observers
+
+    key (operator, vaultId) : VaultStateKey
+    maintainer key._1
+
+    choice ProcessDeposit : (ContractId VaultState, Decimal)
+      with
+        depositAmount : Decimal
+      controller operator, custodian
+      do
+        -- Use current sharePrice to calculate shares to mint
+        let sharesToMint = depositAmount / sharePrice
+        newStateCid <- create this with
+          totalAssets = totalAssets + depositAmount
+          totalShares = totalShares + sharesToMint
+        pure (newStateCid, sharesToMint)
+
+    choice ProcessRedemption : (ContractId VaultState, Decimal)
+      with
+        sharesToBurn : Decimal
+      controller operator, custodian
+      do
+        assertMsg "Cannot redeem: no shares exist in vault" (totalShares > 0.0)
+        let redemptionAmount = sharesToBurn * sharePrice
+        assertMsg "Insufficient assets in vault" (totalAssets >= redemptionAmount)
+        assertMsg "Insufficient shares in vault" (totalShares >= sharesToBurn)
+        let newTotalShares = totalShares - sharesToBurn
+        -- Reset sharePrice to 1.0 only if all shares are redeemed
+        let newSharePrice = if newTotalShares == 0.0 then 1.0 else sharePrice
+        newStateCid <- create this with
+          totalAssets = totalAssets - redemptionAmount
+          totalShares = newTotalShares
+          sharePrice = newSharePrice
+        pure (newStateCid, redemptionAmount)
+
+    -- Admin-only choice to update share price (oracle pattern)
+    choice UpdateSharePrice : ContractId VaultState
+      with
+        newSharePrice : Decimal
+      controller operator
+      do
+        assertMsg "Share price must be positive" (newSharePrice > 0.0)
+        create this with
+          sharePrice = newSharePrice

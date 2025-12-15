@@ -1,0 +1,38 @@
+{
+  "name": "vault-sdk",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./vault-api.ts",
+  "types": "./vault-api.ts",
+  "exports": {
+    ".": "./vault-api.ts",
+    "./core": "./core/index.ts",
+    "./ledger": "./ledger/index.ts",
+    "./utils": "./utils/index.ts",
+    "./react": "./react/index.ts"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.90.12",
+    "react": "^19.2.3"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "@tanstack/react-query": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@types/react": "^19.2.7"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8",
+    "@vitest/ui": "^2.1.8"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui"
+  }
+}

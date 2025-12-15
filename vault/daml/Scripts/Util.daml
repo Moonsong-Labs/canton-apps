@@ -1,0 +1,51 @@
+module Scripts.Util where
+
+import Daml.Script
+import Daml.Finance.Interface.Holding.V4.Factory qualified as HoldingFactory (I, Reference(..))
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I, View)
+import Daml.Finance.Interface.Types.Common.V3.Types (HoldingFactoryKey(..), InstrumentKey)
+import Daml.Finance.Holding.V4.Factory qualified as Holding (Factory(..))
+
+-- | Creates a user + party given a hint.
+createParty : Text -> Script Party
+createParty name = do
+  party <- allocatePartyWithHint name $ PartyIdHint name
+  userId <- validateUserId name
+  createUser (User userId (Some party)) [CanActAs party]
+  pure party
+
+-- | Gets an existing party by display name. Fails if not found.
+getPartyByName : Text -> Script Party
+getPartyByName name = do
+  parties <- listKnownParties
+  case find (\p -> p.displayName == Some name) parties of
+    Some p -> pure p.party
+    None -> error $ "Party not found: " <> name
+
+-- | Finds a single holding by instrument for a party. Fails if none or multiple found.
+getHoldingByInstrument : Party -> InstrumentKey -> Script (ContractId Holding.I)
+getHoldingByInstrument party instrument = do
+  (cid, _) <- getHoldingWithView party instrument
+  pure cid
+
+-- | Finds a holding and its view by instrument. Fails if none or multiple found.
+getHoldingWithView : Party -> InstrumentKey -> Script (ContractId Holding.I, Holding.View)
+getHoldingWithView party instrument = do
+  holdings <- queryInterface @Holding.I party
+  let matches = [ (cid, v) | (cid, Some v) <- holdings, v.instrument == instrument ]
+  case matches of
+    [match] -> pure match
+    [] -> error $ "No holding found for instrument: " <> show instrument.id
+    _ -> error $ "Multiple holdings found for instrument: " <> show instrument.id
+
+-- | Creates a holding factory with Reference template.
+createHoldingFactory : Holding.Factory -> Script HoldingFactoryKey
+createHoldingFactory holdingFactory = do
+  cid <- toInterfaceContractId @HoldingFactory.I <$> submit holdingFactory.provider do
+    createCmd holdingFactory
+  submit holdingFactory.provider do
+    createCmd HoldingFactory.Reference with
+      factoryView = view $ toInterface @HoldingFactory.I holdingFactory
+      cid
+      observers = holdingFactory.observers
+  pure $ HoldingFactoryKey with provider = holdingFactory.provider; id = holdingFactory.id
