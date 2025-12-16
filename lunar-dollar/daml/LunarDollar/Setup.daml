@@ -1,0 +1,13 @@
+-- | Re-export module for Lunar Dollar setup.
+-- This module is used by external packages (like vault) that need to import
+-- the Lunar Dollar setup via data-dependencies without naming conflicts.
+module LunarDollar.Setup where
+
+import Daml.Script
+import Scripts.Setup (setup)
+
+-- | Run the Lunar Dollar setup script.
+-- Creates parties (Bank, Alicia, Bruno, Public), factories, and the LNRD instrument.
+setupLunarDollar : Script ()
+setupLunarDollar = setup
+

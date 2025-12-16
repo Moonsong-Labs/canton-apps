@@ -10,6 +10,8 @@ dependencies:
   - daml-script-lts
   - daml-stdlib
 data-dependencies:
+  # LUNAR DOLLAR PROJECT
+  - ../lunar-dollar/.daml/dist/lunar-dollar-1.0.0.dar
   # INTERFACE DEPENDENCIES
   - .lib/daml-finance-interface-account.dar
   - .lib/daml-finance-interface-holding.dar

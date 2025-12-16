@@ -1,0 +1,38 @@
+module Scripts.SetupAll where
+
+import Daml.Script
+
+import Scripts.Setup (setupVault, VaultTestState)
+import LunarDollar.Setup (setupLunarDollar)
+
+-- | Combined setup script that initializes both Vault and Lunar Dollar projects.
+-- This creates all parties, factories, instruments, and accounts for both systems.
+setupAll : Script VaultTestState
+setupAll = do
+  debug "=========================================="
+  debug "Starting combined setup: Vault + Lunar Dollar"
+  debug "=========================================="
+
+  -- First, run Vault setup
+  debug ""
+  debug "[1/2] Running Vault setup..."
+  vaultState <- setupVault
+  debug "Vault setup complete!"
+  debug $ "  - Parties: Alice, Vault"
+  debug $ "  - Instruments: USD, VAULT-SHARE"
+
+  -- Then, run Lunar Dollar setup
+  debug ""
+  debug "[2/2] Running Lunar Dollar setup..."
+  setupLunarDollar
+  debug "Lunar Dollar setup complete!"
+  debug $ "  - Parties: Bank, Alicia, Bruno, Public"
+  debug $ "  - Instrument: LNRD"
+
+  debug ""
+  debug "=========================================="
+  debug "Combined setup complete!"
+  debug "=========================================="
+
+  pure vaultState
+
