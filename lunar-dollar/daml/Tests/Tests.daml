@@ -9,44 +9,44 @@ import Scripts.Balance (BalanceArgs(..), balance)
 testTransferExactAmount : Script ()
 testTransferExactAmount = do
   holdingCid <- mint MintArgs with
-    recipient = "Alicia"
+    recipient = "Alice"
     amount = 100.0
 
   requestCid <- createTransferRequest CreateTransferRequestArgs with
-    sender = "Alicia"
-    receiver = "Bruno"
+    sender = "Alice"
+    receiver = "Bob"
     amount = 100.0
 
   _ <- acceptTransferRequest AcceptTransferRequestArgs with
-    sender = "Alicia"
-    receiver = "Bruno"
+    sender = "Alice"
+    receiver = "Bob"
     requestCid
     holdingCid
 
-  balance BalanceArgs with party = "Alicia"
-  balance BalanceArgs with party = "Bruno"
+  balance BalanceArgs with party = "Alice"
+  balance BalanceArgs with party = "Bob"
 
   pure ()
 
 testTransferWithSplit : Script ()
 testTransferWithSplit = do
   holdingCid <- mint MintArgs with
-    recipient = "Alicia"
+    recipient = "Alice"
     amount = 500.0
 
   requestCid <- createTransferRequest CreateTransferRequestArgs with
-    sender = "Alicia"
-    receiver = "Bruno"
+    sender = "Alice"
+    receiver = "Bob"
     amount = 200.0
 
   _ <- acceptTransferRequest AcceptTransferRequestArgs with
-    sender = "Alicia"
-    receiver = "Bruno"
+    sender = "Alice"
+    receiver = "Bob"
     requestCid
     holdingCid
 
-  balance BalanceArgs with party = "Alicia"
-  balance BalanceArgs with party = "Bruno"
+  balance BalanceArgs with party = "Alice"
+  balance BalanceArgs with party = "Bob"
 
   pure ()
 

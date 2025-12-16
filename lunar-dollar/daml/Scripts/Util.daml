@@ -29,6 +29,19 @@ createParty name = do
   createUser (User userId (Some party)) [CanActAs party]
   pure party
 
+-- | Gets an existing party or creates a new one if it doesn't exist.
+-- This is useful when running multiple setup scripts that may share parties.
+getOrCreateParty : Text -> Script Party
+getOrCreateParty name = do
+  parties <- listKnownParties
+  case filter (\p -> p.displayName == Some name) parties of
+    (p :: _) -> do
+      debug $ "Party already exists: " <> name
+      pure p.party
+    [] -> do
+      debug $ "Creating new party: " <> name
+      createParty name
+
 getLNRD : Script (ContractId LunarDollar.LunarDollar, LunarDollar.LunarDollar)
 getLNRD = do
   bank <- lookupParty "Bank"

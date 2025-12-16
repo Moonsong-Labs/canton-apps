@@ -14,6 +14,19 @@ createParty name = do
   createUser (User userId (Some party)) [CanActAs party]
   pure party
 
+-- | Gets an existing party or creates a new one if it doesn't exist.
+-- This is useful when running multiple setup scripts that may share parties.
+getOrCreateParty : Text -> Script Party
+getOrCreateParty name = do
+  parties <- listKnownParties
+  case find (\p -> p.displayName == Some name) parties of
+    Some p -> do
+      debug $ "Party already exists: " <> name
+      pure p.party
+    None -> do
+      debug $ "Creating new party: " <> name
+      createParty name
+
 -- | Gets an existing party by display name. Fails if not found.
 getPartyByName : Text -> Script Party
 getPartyByName name = do

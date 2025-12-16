@@ -53,7 +53,7 @@ data-dependencies:
   # - .lib/daml-finance-instrument-swap.dar
   # - .lib/daml-finance-util.dar
 start-navigator: no
-init-script: Scripts.Setup:setupVault
+init-script: Scripts.SetupAll:setupAll
 build-options:
   - --target=1.17
   - -Wno-upgrade-interfaces

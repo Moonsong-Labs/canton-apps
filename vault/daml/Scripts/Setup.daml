@@ -13,13 +13,13 @@ import Workflow.CreateAccount qualified as CreateAccount (Accept(..), Request(..
 import Workflow.CreditAccount qualified as CreditAccount (Accept(..), Request(..))
 import Vault.Config (VaultConfig(..))
 import Vault.State (VaultState(..))
-import Scripts.Util (createHoldingFactory, createParty, getPartyByName)
+import Scripts.Util (createHoldingFactory, getOrCreateParty, getPartyByName)
 
 -- | Setup script: creates parties, factories, instruments, accounts, and vault state.
 setupVault : Script VaultTestState
 setupVault = do
-  -- Create parties
-  [alice, vault] <- mapA createParty ["Alice", "Vault"]
+  -- Create parties (using getOrCreateParty to allow running after other setups)
+  [alice, vault] <- mapA getOrCreateParty ["Alice", "Vault"]
 
   -- Create factories
   accountFactoryCid <- toInterfaceContractId @AccountFactory.I <$> submit vault do

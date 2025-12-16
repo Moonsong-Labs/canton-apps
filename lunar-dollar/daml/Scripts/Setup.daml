@@ -15,12 +15,12 @@ import Daml.Finance.Account.V4.Account qualified as Account (Factory(..))
 import Daml.Finance.Holding.V4.Factory qualified as Holding (Factory(..))
 import Daml.Finance.Instrument.Token.V4.Factory qualified as Token (Factory(..))
 
-import Scripts.Util (createHoldingFactory, createParty, createBankAccount)
+import Scripts.Util (createHoldingFactory, getOrCreateParty, createBankAccount)
 
 import LunarDollar
 
 setup = script do
-  [bank, alicia, bruno, public] <- mapA createParty ["Bank", "Alicia", "Bruno", "Public"]
+  [bank, alice, bob, public] <- mapA getOrCreateParty ["Bank", "Alice", "Bob", "Public"]
   debug $ "Public party: " <> show public
   accountFactoryCid <- toInterfaceContractId @AccountFactory.I <$> submit bank do
     createCmd Account.Factory with
@@ -31,15 +31,15 @@ setup = script do
     Holding.Factory with
       provider = bank
       id = Id "Holding Factory"
-      observers = Map.fromList [("Settlers", Set.fromList [alicia, bruno])]
+      observers = Map.fromList [("Settlers", Set.fromList [alice, bob])]
 
   tokenFactoryCid <- toInterfaceContractId @TokenFactory.I <$> submit bank do
     createCmd Token.Factory with
       provider = bank
       observers = mempty
   
-  aliciaAccountCid <- createBankAccount bank holdingFactory accountFactoryCid alicia "Alicia's Account" [bruno]
-  brunoAccountCid <- createBankAccount bank holdingFactory accountFactoryCid bruno "Bruno's Account" [alicia]
+  aliceAccountCid <- createBankAccount bank holdingFactory accountFactoryCid alice "Alice's Account" [bob]
+  bobAccountCid <- createBankAccount bank holdingFactory accountFactoryCid bob "Bob's Account" [alice]
 
   let
     instrumentId = Id "LNRD"

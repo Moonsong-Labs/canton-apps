@@ -26,7 +26,7 @@ setupAll = do
   debug "[2/2] Running Lunar Dollar setup..."
   setupLunarDollar
   debug "Lunar Dollar setup complete!"
-  debug $ "  - Parties: Bank, Alicia, Bruno, Public"
+  debug $ "  - Parties: Bank, Alice, Bob, Public"
   debug $ "  - Instrument: LNRD"
 
   debug ""
