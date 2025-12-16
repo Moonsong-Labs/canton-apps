@@ -129,7 +129,7 @@ export class PackageResolver {
     // Try each hash until we find one that works for this template
     for (const hash of this.packageHashes) {
       const testId = `${hash}:${modulePath}:${templateName}`;
-      
+
       try {
         const response = await fetch(`${baseUrl}/v1/query`, {
           method: 'POST',
@@ -139,29 +139,23 @@ export class PackageResolver {
             query: {},
           }),
         });
-        
-        // Canton JSON API may return HTTP 200 even when the body contains errors.
-        // Only treat it as success if the response body has no errors.
+
+        // Must check response body - JSON API returns 200 with errors in body
         if (response.ok) {
-          const data = await response.json().catch(() => null) as
-            | { errors?: unknown; result?: unknown }
-            | null;
+          const data = await response.json() as { status?: number; errors?: string[]; result?: unknown };
 
-          const errorsValue = data && typeof data === 'object' ? (data as { errors?: unknown }).errors : undefined;
-          const hasErrors =
-            Array.isArray(errorsValue) ? errorsValue.length > 0 : !!errorsValue;
-
-          if (hasErrors) {
-            // Wrong package hash for this template, try next
+          // Check for wrapped errors (JSON API returns { status, errors } for invalid templates)
+          if (data.errors && data.errors.length > 0) {
+            // Template not found in this package, try next
             continue;
           }
 
-          // Success - cache mapping for future use
+          // Success - template exists in this package
           this.packageCache.set(packageName, hash);
           console.log(`PackageResolver: Resolved "${packageName}" -> "${hash.substring(0, 8)}..."`);
           return testId;
         }
-        
+
         // 400 with unknownTemplateIds means wrong package, try next
         // Other errors might be transient, continue trying
       } catch {

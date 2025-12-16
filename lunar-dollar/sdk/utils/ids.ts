@@ -24,7 +24,7 @@ export function createInstrumentKey(
     issuer,
     id: createId(id),
     version,
-    holdingStandard: 'TransferableFungible',
+    holdingStandard: { tag: 'TransferableFungible' },
   };
 }
 

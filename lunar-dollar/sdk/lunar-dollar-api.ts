@@ -4824,7 +4824,7 @@ export const MockFactories = {
     issuer,
     id: { unpack: id },
     version,
-    holdingStandard: "TransferableFungible",
+    holdingStandard: { tag: "TransferableFungible" },
   }),
 
   /**

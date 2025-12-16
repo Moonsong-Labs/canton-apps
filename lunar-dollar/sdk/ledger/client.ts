@@ -376,12 +376,22 @@ export async function isLedgerReachable(
 ): Promise<boolean> {
   try {
     const fullConfig = createConfig(config);
-    // Reachability check should NOT depend on having a token or a known party.
-    // Treat 401/403 as "reachable but unauthorized".
-    const response = await fetch(`${fullConfig.ledgerUrl}/v1/packages`, {
+    // Generate JWT if no token provided (required for Canton sandbox)
+    const token =
+      fullConfig.token ||
+      createJwtToken("admin", {
+        ledgerId: fullConfig.ledgerId,
+        applicationId: fullConfig.applicationId,
+      });
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+    const response = await fetch(`${fullConfig.ledgerUrl}/v1/parties`, {
       method: "GET",
+      headers,
     });
-    return response.ok || response.status === 401 || response.status === 403;
+    return response.ok;
   } catch {
     return false;
   }
@@ -395,14 +405,13 @@ export async function getParties(
   config?: Partial<LedgerConfig>
 ): Promise<Party[]> {
   const fullConfig = createConfig(config);
-  const token = fullConfig.token;
-  if (!token) {
-    throw new Error(
-      "getParties requires config.token (LEDGER_TOKEN). " +
-        "The Canton JSON API requires a Bearer token even to list parties. " +
-        'See the generated SDK README section "JSON API Auth (curl)" for a copy-pasteable token snippet.'
-    );
-  }
+  // Generate JWT if no token provided (required for Canton sandbox)
+  const token =
+    fullConfig.token ||
+    createJwtToken("admin", {
+      ledgerId: fullConfig.ledgerId,
+      applicationId: fullConfig.applicationId,
+    });
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
