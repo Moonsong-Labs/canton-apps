@@ -17,56 +17,56 @@ testX402PaymentFlow = do
   debug "=== x402 Payment Flow Test ==="
   
   holdingCid <- mint MintArgs with
-    recipient = "Alice"
+    recipient = "Alicia"
     amount = 100.0
 
-  debug "1. Alice has 100 LNRD"
-  balance BalanceArgs with party = "Alice"
+  debug "1. Alicia has 100 LNRD"
+  balance BalanceArgs with party = "Alicia"
 
   receiverCid <- setupReceiver SetupReceiverArgs with
-    receiver = "Bob"
+    receiver = "Bruno"
     prices = Map.fromList
       [ ("/api/premium-data", 25.0)
       , ("/api/basic-data", 5.0)
       ]
     publicParty
 
-  debug "2. Bob created PaymentReceiver with price list"
+  debug "2. Bruno created PaymentReceiver with price list"
 
   accessGrantCid <- pay PayArgs with
-    payer = "Alice"
-    receiver = "Bob"
+    payer = "Alicia"
+    receiver = "Bruno"
     receiverCid
     sessionId = "session-abc123"
     resource = "/api/premium-data"
     maxPrice = 25.0
     holdingCid
 
-  debug "3. Alice paid for /api/premium-data (price: 25 LNRD)"
+  debug "3. Alicia paid for /api/premium-data (price: 25 LNRD)"
   debug $ "   AccessGrant created: " <> show accessGrantCid
 
   debug "4. Final balances:"
-  balance BalanceArgs with party = "Alice"
-  balance BalanceArgs with party = "Bob"
+  balance BalanceArgs with party = "Alicia"
+  balance BalanceArgs with party = "Bruno"
 
   pure ()
 
 runPayment : Script ()
 runPayment = do
-  alice <- lookupParty "Alice"
+  alicia <- lookupParty "Alicia"
 
   holdingCid <- mint MintArgs with
-    recipient = "Alice"
+    recipient = "Alicia"
     amount = 1000.0
 
   receiverCid <- setupReceiver SetupReceiverArgs with
-    receiver = "Bob"
+    receiver = "Bruno"
     prices = Map.fromList [("random", 250.0)]
-    publicParty = alice
+    publicParty = alicia
 
   accessGrantCid <- pay PayArgs with
-    payer = "Alice"
-    receiver = "Bob"
+    payer = "Alicia"
+    receiver = "Bruno"
     receiverCid
     sessionId = "session-001"
     resource = "random"
@@ -74,8 +74,8 @@ runPayment = do
     holdingCid
 
   debug $ "AccessGrant created: " <> show accessGrantCid
-  balance BalanceArgs with party = "Alice"
-  balance BalanceArgs with party = "Bob"
+  balance BalanceArgs with party = "Alicia"
+  balance BalanceArgs with party = "Bruno"
   pure ()
 
 testX402PaymentWithSplit : Script ()
@@ -86,29 +86,29 @@ testX402PaymentWithSplit = do
   debug "=== x402 Payment With Split Test ==="
 
   holdingCid <- mint MintArgs with
-    recipient = "Alice"
+    recipient = "Alicia"
     amount = 100.0
 
   receiverCid <- setupReceiver SetupReceiverArgs with
-    receiver = "Bob"
+    receiver = "Bruno"
     prices = Map.fromList
       [ ("/api/expensive-resource", 25.0)
       ]
     publicParty
 
-  debug "Alice paying for /api/expensive-resource (price: 25 LNRD)"
+  debug "Alicia paying for /api/expensive-resource (price: 25 LNRD)"
 
   _ <- pay PayArgs with
-    payer = "Alice"
-    receiver = "Bob"
+    payer = "Alicia"
+    receiver = "Bruno"
     receiverCid
     sessionId = "session-split-test"
     resource = "/api/expensive-resource"
     maxPrice = 25.0
     holdingCid
 
-  debug "Final balances (Alice should have 75, Bob should have 25):"
-  balance BalanceArgs with party = "Alice"
-  balance BalanceArgs with party = "Bob"
+  debug "Final balances (Alicia should have 75, Bruno should have 25):"
+  balance BalanceArgs with party = "Alicia"
+  balance BalanceArgs with party = "Bruno"
 
   pure ()
