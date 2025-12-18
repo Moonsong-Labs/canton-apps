@@ -114,9 +114,17 @@ export class CantonLedgerClient implements LedgerConnection {
   /**
    * Resolve a template ID from package name format to package hash format.
    * Called automatically by query, create, and exercise methods.
+   * Automatically retries once with a fresh cache if resolution fails.
    */
   private async resolveTemplateId(templateId: string): Promise<string> {
-    return this.resolver.resolveTemplateId(templateId, this.baseUrl, this.headers);
+    try {
+      return await this.resolver.resolveTemplateId(templateId, this.baseUrl, this.headers);
+    } catch (error) {
+      // If resolution fails, clear cache and retry once (handles ledger restart scenario)
+      console.warn('PackageResolver: Resolution failed, clearing cache and retrying...');
+      await this.resolver.reinitialize(this.baseUrl, this.headers);
+      return this.resolver.resolveTemplateId(templateId, this.baseUrl, this.headers);
+    }
   }
 
   /**

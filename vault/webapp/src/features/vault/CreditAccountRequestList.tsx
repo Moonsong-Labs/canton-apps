@@ -36,6 +36,51 @@ export function CreditAccountRequestList() {
   const [holdingStandard, setHoldingStandard] = useState('TransferableFungible');
   const [amount, setAmount] = useState('');
 
+  // Get unique custodians/issuers from accounts for instrument presets
+  const knownParties = useMemo(() => {
+    if (!accounts) return { bank: '', vault: '' };
+    const parties: { bank: string; vault: string } = { bank: '', vault: '' };
+    accounts.forEach((a: any) => {
+      const custodianName = a.payload.custodian?.split('::')[0] || '';
+      if (custodianName === 'Bank' && !parties.bank) {
+        parties.bank = a.payload.custodian;
+      } else if (custodianName === 'Vault' && !parties.vault) {
+        parties.vault = a.payload.custodian;
+      }
+    });
+    return parties;
+  }, [accounts]);
+
+  // Auto-fill instrument details based on preset selection
+  const handleInstrumentPreset = (preset: 'LNRD' | 'USD' | 'VAULT-SHARE' | 'custom') => {
+    if (preset === 'LNRD' && knownParties.bank) {
+      setInstrumentDepository(knownParties.bank);
+      setInstrumentIssuer(knownParties.bank);
+      setInstrumentId('LNRD');
+      setInstrumentVersion('0');
+      setHoldingStandard('TransferableFungible');
+    } else if (preset === 'USD' && knownParties.vault) {
+      setInstrumentDepository(knownParties.vault);
+      setInstrumentIssuer(knownParties.vault);
+      setInstrumentId('USD');
+      setInstrumentVersion('0');
+      setHoldingStandard('TransferableFungible');
+    } else if (preset === 'VAULT-SHARE' && knownParties.vault) {
+      setInstrumentDepository(knownParties.vault);
+      setInstrumentIssuer(knownParties.vault);
+      setInstrumentId('VAULT-SHARE');
+      setInstrumentVersion('0');
+      setHoldingStandard('TransferableFungible');
+    } else {
+      // Custom - clear fields
+      setInstrumentDepository('');
+      setInstrumentIssuer('');
+      setInstrumentId('');
+      setInstrumentVersion('0');
+      setHoldingStandard('TransferableFungible');
+    }
+  };
+
   const userAccounts = useMemo(() => {
     if (!accounts || !party) return [];
     return accounts.filter((a: any) => a.payload.owner === party);
@@ -166,6 +211,52 @@ export function CreditAccountRequestList() {
               onChange={(e) => setSelectedAccountId(e.target.value)}
               disabled={loadingAccounts}
             />
+            
+            {/* Instrument Presets */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Quick Select Instrument</label>
+              <div className="flex gap-2 flex-wrap">
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant={instrumentId === 'LNRD' ? 'primary' : 'secondary'}
+                  onClick={() => handleInstrumentPreset('LNRD')}
+                  disabled={!knownParties.bank}
+                  title={knownParties.bank ? 'Lunar Dollars (Bank)' : 'Bank party not found'}
+                >
+                  🌙 LNRD
+                </Button>
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant={instrumentId === 'USD' ? 'primary' : 'secondary'}
+                  onClick={() => handleInstrumentPreset('USD')}
+                  disabled={!knownParties.vault}
+                  title={knownParties.vault ? 'USD Stablecoin (Vault)' : 'Vault party not found'}
+                >
+                  💵 USD
+                </Button>
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant={instrumentId === 'VAULT-SHARE' ? 'primary' : 'secondary'}
+                  onClick={() => handleInstrumentPreset('VAULT-SHARE')}
+                  disabled={!knownParties.vault}
+                  title={knownParties.vault ? 'Vault Shares (Vault)' : 'Vault party not found'}
+                >
+                  🏦 VAULT-SHARE
+                </Button>
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant="ghost"
+                  onClick={() => handleInstrumentPreset('custom')}
+                >
+                  ✏️ Custom
+                </Button>
+              </div>
+            </div>
+
             <Input
               label="Instrument Depository"
               value={instrumentDepository}
@@ -329,6 +420,52 @@ export function CreditAccountRequestList() {
             onChange={(e) => setSelectedAccountId(e.target.value)}
             disabled={loadingAccounts}
           />
+          
+          {/* Instrument Presets */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Quick Select Instrument</label>
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                type="button" 
+                size="sm" 
+                variant={instrumentId === 'LNRD' ? 'primary' : 'secondary'}
+                onClick={() => handleInstrumentPreset('LNRD')}
+                disabled={!knownParties.bank}
+                title={knownParties.bank ? 'Lunar Dollars (Bank)' : 'Bank party not found'}
+              >
+                🌙 LNRD
+              </Button>
+              <Button 
+                type="button" 
+                size="sm" 
+                variant={instrumentId === 'USD' ? 'primary' : 'secondary'}
+                onClick={() => handleInstrumentPreset('USD')}
+                disabled={!knownParties.vault}
+                title={knownParties.vault ? 'USD Stablecoin (Vault)' : 'Vault party not found'}
+              >
+                💵 USD
+              </Button>
+              <Button 
+                type="button" 
+                size="sm" 
+                variant={instrumentId === 'VAULT-SHARE' ? 'primary' : 'secondary'}
+                onClick={() => handleInstrumentPreset('VAULT-SHARE')}
+                disabled={!knownParties.vault}
+                title={knownParties.vault ? 'Vault Shares (Vault)' : 'Vault party not found'}
+              >
+                🏦 VAULT-SHARE
+              </Button>
+              <Button 
+                type="button" 
+                size="sm" 
+                variant="ghost"
+                onClick={() => handleInstrumentPreset('custom')}
+              >
+                ✏️ Custom
+              </Button>
+            </div>
+          </div>
+
           <Input
             label="Instrument Depository"
             value={instrumentDepository}

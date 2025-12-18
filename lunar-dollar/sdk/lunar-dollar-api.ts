@@ -12,8 +12,6 @@ import {
   Numeric,
   Time,
   Command,
-  Contract,
-  ExerciseResult,
   DamlMap,
 } from "./core/primitives";
 import {
@@ -42,7 +40,7 @@ type FloatingRate = unknown;
 type DayCountConventionEnum = unknown;
 type Int = number;
 type EventData = unknown;
-type Claim<T = unknown, U = unknown, V = unknown, W = unknown> = unknown;
+type Claim = unknown;
 type OptionTypeEnum = unknown;
 type BarrierTypeEnum = unknown;
 type Underlying = unknown;
@@ -1101,7 +1099,7 @@ export namespace Generic_Instrument {
     version: string;
     holdingStandard: HoldingStandard;
     description: string;
-    claims: Claim<Time, Numeric, InstrumentKey, string>;
+    claims: Claim;
     acquisitionTime: Time;
     observers: DamlMap<string, Party[]>;
     lastEventTimestamp: Time;
@@ -4824,7 +4822,7 @@ export const MockFactories = {
     issuer,
     id: { unpack: id },
     version,
-    holdingStandard: { tag: "TransferableFungible" },
+    holdingStandard: "TransferableFungible",
   }),
 
   /**

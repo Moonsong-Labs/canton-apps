@@ -25,6 +25,9 @@
       ],
       "@sdk/*": [
         "../sdk/*"
+      ],
+      "@lunar-dollar/*": [
+        "../../lunar-dollar/sdk/*"
       ]
     }
   },

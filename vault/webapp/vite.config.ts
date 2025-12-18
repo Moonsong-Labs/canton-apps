@@ -8,13 +8,14 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@sdk': path.resolve(__dirname, '../sdk'),
+      '@lunar-dollar': path.resolve(__dirname, '../../lunar-dollar/sdk'),
     },
   },
   server: {
     port: 3000,
-    // Allow importing the sibling ../sdk folder in dev
+    // Allow importing the sibling ../sdk and ../../lunar-dollar/sdk folders in dev
     fs: {
-      allow: [path.resolve(__dirname, '..')],
+      allow: [path.resolve(__dirname, '..'), path.resolve(__dirname, '../../lunar-dollar/sdk')],
     },
     proxy: {
       '/v1': {

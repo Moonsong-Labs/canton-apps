@@ -36,4 +36,5 @@ export {
   PackageResolver,
   getPackageResolver,
   createPackageResolver,
+  resetPackageResolver,
 } from './resolver';

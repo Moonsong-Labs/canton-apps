@@ -207,7 +207,7 @@ export interface PeriodicSchedule {
 // ENUMS (Opaque types - actual values depend on Daml model)
 // ═══════════════════════════════════════════════════════════════
 
-export type HoldingStandard = { tag: string; value?: unknown };
+export type HoldingStandard = string;
 export type LockType = { tag: string; value?: unknown };
 export type Allocation = { tag: string; value?: unknown };
 export type Approval = { tag: string; value?: unknown };
