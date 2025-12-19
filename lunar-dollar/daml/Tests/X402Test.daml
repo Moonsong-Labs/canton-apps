@@ -6,13 +6,13 @@ import DA.Map qualified as Map (fromList)
 import Scripts.Setup (setup)
 import Scripts.Mint (MintArgs(..), mint)
 import Scripts.Balance (BalanceArgs(..), balance)
-import Scripts.Util (createParty, lookupParty)
+import Scripts.Util (getOrCreateParty, lookupParty)
 import Scripts.X402 (SetupReceiverArgs(..), PayArgs(..), setupReceiver, pay)
 
 testX402PaymentFlow : Script ()
 testX402PaymentFlow = do
   setup
-  publicParty <- createParty "Public"
+  publicParty <- getOrCreateParty "Public"
 
   debug "=== x402 Payment Flow Test ==="
   
@@ -81,7 +81,7 @@ runPayment = do
 testX402PaymentWithSplit : Script ()
 testX402PaymentWithSplit = do
   setup
-  publicParty <- createParty "Public"
+  publicParty <- getOrCreateParty "Public"
 
   debug "=== x402 Payment With Split Test ==="
 
