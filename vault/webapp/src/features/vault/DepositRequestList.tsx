@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useDepositRequests, useAcceptDeposit, useDeclineDeposit, useCancelDeposit } from '@/hooks/useContracts';
+import { useDepositRequests, useDeclineDeposit, useCancelDeposit } from '@/hooks/useContracts';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -7,12 +7,18 @@ import { Spinner } from '@/components/ui/Spinner';
 import { formatPartyId } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { MakeDepositForm } from './MakeDepositForm';
+import { useLedgerClient } from '@/hooks/useLedger';
+import { TemplateIds } from '@sdk/vault-api';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/lib/constants';
 
 export function DepositRequestList() {
   const { party } = useAuth();
   const { data: depositRequests, isLoading, error } = useDepositRequests();
   const [showMakeDepositForm, setShowMakeDepositForm] = useState(false);
-  const acceptDeposit = useAcceptDeposit();
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const client = useLedgerClient();
+  const queryClient = useQueryClient();
   const declineDeposit = useDeclineDeposit();
   const cancelDeposit = useCancelDeposit();
 
@@ -56,14 +62,29 @@ export function DepositRequestList() {
     );
   }
 
-  const handleAccept = async (contractId: string) => {
+  const handleAccept = async (contractId: string, operator: string, custodian: string) => {
+    if (!client) return;
+    
+    setAcceptingId(contractId);
     try {
-      await acceptDeposit.mutateAsync({
-        contractId,
-        args: {}
-      });
+      // Accept requires both operator AND custodian to authorize
+      // Use multi-party submission with both parties
+      await client.exercise(
+        TemplateIds.Vault_Deposit_DepositRequest,
+        contractId as any,
+        'Accept',
+        {},
+        [operator, custodian]  // Act as both parties
+      );
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.contracts(TemplateIds.Vault_Deposit_DepositRequest, party || undefined) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.contracts(TemplateIds.Holding_TransferableFungible, party || undefined) });
     } catch (err) {
       console.error('Failed to accept deposit:', err);
+      alert(err instanceof Error ? err.message : 'Failed to accept deposit');
+    } finally {
+      setAcceptingId(null);
     }
   };
 
@@ -168,10 +189,14 @@ export function DepositRequestList() {
                       <>
                         <Button
                           size="sm"
-                          onClick={() => handleAccept(contract.contractId)}
-                          disabled={acceptDeposit.isPending}
+                          onClick={() => handleAccept(
+                            contract.contractId,
+                            contract.payload.operator,
+                            contract.payload.custodian
+                          )}
+                          disabled={acceptingId === contract.contractId}
                         >
-                          {acceptDeposit.isPending ? 'Accepting...' : 'Accept'}
+                          {acceptingId === contract.contractId ? 'Accepting...' : 'Accept'}
                         </Button>
                         <Button
                           size="sm"

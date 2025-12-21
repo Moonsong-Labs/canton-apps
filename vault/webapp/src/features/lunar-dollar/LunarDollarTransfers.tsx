@@ -66,7 +66,7 @@ export function LunarDollarTransfers() {
     return null;
   };
 
-  // Get only LNRD holdings (filter out Vault holdings like USD)
+  // Get only LNRD holdings
   const lnrdHoldings = (holdings as HoldingContract[] || []).filter(
     h => h.payload.instrument?.id?.unpack === 'LNRD'
   );

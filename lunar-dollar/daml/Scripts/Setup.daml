@@ -20,18 +20,18 @@ import Scripts.Util (createHoldingFactory, getOrCreateParty, createBankAccount)
 import LunarDollar
 
 setup = script do
-  [bank, alice, bob, public] <- mapA getOrCreateParty ["Bank", "Alice", "Bob", "Public"]
+  [bank, alice, bob, public, vault] <- mapA getOrCreateParty ["Bank", "Alice", "Bob", "Public", "Vault"]
   debug $ "Public party: " <> show public
   accountFactoryCid <- toInterfaceContractId @AccountFactory.I <$> submit bank do
     createCmd Account.Factory with
       provider = bank
       observers = mempty
-  
+
   holdingFactory <- createHoldingFactory
     Holding.Factory with
       provider = bank
       id = Id "Holding Factory"
-      observers = Map.fromList [("Settlers", Set.fromList [alice, bob])]
+      observers = Map.fromList [("Settlers", Set.fromList [alice, bob, vault])]
 
   tokenFactoryCid <- toInterfaceContractId @TokenFactory.I <$> submit bank do
     createCmd Token.Factory with

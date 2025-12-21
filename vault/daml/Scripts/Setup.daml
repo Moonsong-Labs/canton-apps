@@ -1,6 +1,8 @@
 module Scripts.Setup where
 
 import Daml.Script
+import DA.Map qualified as Map (fromList)
+import DA.Set qualified as Set (fromList)
 import Daml.Finance.Interface.Account.V4.Factory qualified as AccountFactory (I)
 import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
 import Daml.Finance.Interface.Instrument.Token.V4.Factory qualified as TokenFactory (Create(..), I)
@@ -15,33 +17,51 @@ import Vault.Config (VaultConfig(..))
 import Vault.State (VaultState(..))
 import Scripts.Util (createHoldingFactory, getOrCreateParty, getPartyByName)
 
+-- | Initial LNRD funding for the vault treasury (from Bank)
+treasuryInitialFunding : Decimal
+treasuryInitialFunding = 100000.0  -- 100k LNRD
+
 -- | Setup script: creates parties, factories, instruments, accounts, and vault state.
+-- NOTE: This script expects Lunar Dollar setup to have run first (Bank party and LNRD must exist).
+-- The Vault uses LNRD (Lunar Dollars) as its deposit currency.
 setupVault : Script VaultTestState
 setupVault = do
-  -- Create parties (using getOrCreateParty to allow running after other setups)
-  [alice, vault] <- mapA getOrCreateParty ["Alice", "Vault"]
+  -- Get/create parties
+  [alice, vault, bank] <- mapA getOrCreateParty ["Alice", "Vault", "Bank"]
 
-  -- Create factories
-  accountFactoryCid <- toInterfaceContractId @AccountFactory.I <$> submit vault do
+  -- Create Bank's account factory for Vault's treasury (to hold LNRD)
+  -- The treasury needs to be at Bank since LNRD is issued by Bank
+  bankAccountFactoryCid <- toInterfaceContractId @AccountFactory.I <$> submit bank do
+    createCmd Account.Factory with provider = bank; observers = mempty
+
+  -- Bank's holding factory (for LNRD holdings)
+  bankHoldingFactory <- createHoldingFactory
+    Holding.Factory with 
+      provider = bank
+      id = Id "Bank Holding Factory for Vault"
+      observers = Map.fromList [("VaultObservers", Set.fromList [vault, alice])]
+
+  -- Create Vault's factories (for VAULT-SHARE holdings)
+  vaultAccountFactoryCid <- toInterfaceContractId @AccountFactory.I <$> submit vault do
     createCmd Account.Factory with provider = vault; observers = mempty
 
-  holdingFactory <- createHoldingFactory
-    Holding.Factory with provider = vault; id = Id "Holding Factory"; observers = mempty
+  vaultHoldingFactory <- createHoldingFactory
+    Holding.Factory with provider = vault; id = Id "Vault Holding Factory"; observers = mempty
 
   tokenFactoryCid <- toInterfaceContractId @TokenFactory.I <$> submit vault do
     createCmd Token.Factory with provider = vault; observers = mempty
 
-  -- Create instruments
   now <- getTime
 
+  -- Use LNRD as the deposit instrument (issued by Bank from lunar-dollar)
   let depositInstrument = InstrumentKey with
-        issuer = vault; depository = vault; id = Id "USD"; version = "0"; holdingStandard = TransferableFungible
+        issuer = bank
+        depository = bank
+        id = Id "LNRD"
+        version = "0"
+        holdingStandard = TransferableFungible
 
-  submit vault do
-    exerciseCmd tokenFactoryCid TokenFactory.Create with
-      token = Token with instrument = depositInstrument; description = "USD Stablecoin"; validAsOf = now
-      observers = mempty
-
+  -- Create VAULT-SHARE instrument (issued by Vault)
   let shareInstrument = InstrumentKey with
         issuer = vault; depository = vault; id = Id "VAULT-SHARE"; version = "0"; holdingStandard = TransferableFungible
 
@@ -50,37 +70,34 @@ setupVault = do
       token = Token with instrument = shareInstrument; description = "Vault Share Token"; validAsOf = now
       observers = mempty
 
-  -- Create accounts
+  -- Create Alice's account at Vault (for VAULT-SHARE holdings)
   aliceRequestCid <- submit alice do
     createCmd CreateAccount.Request with owner = alice; custodian = vault
 
   aliceAccount <- submit vault do
     exerciseCmd aliceRequestCid CreateAccount.Accept with
       label = "Alice@Vault"; description = "Alice's account at Vault"
-      accountFactoryCid; holdingFactory; observers = []
+      accountFactoryCid = vaultAccountFactoryCid; holdingFactory = vaultHoldingFactory; observers = []
 
+  -- Create treasury account at Bank (for LNRD holdings)
   treasuryRequestCid <- submit vault do
-    createCmd CreateAccount.Request with owner = vault; custodian = vault
+    createCmd CreateAccount.Request with owner = vault; custodian = bank
 
-  treasuryAccount <- submit vault do
+  treasuryAccount <- submit bank do
     exerciseCmd treasuryRequestCid CreateAccount.Accept with
-      label = "Treasury@Vault"; description = "Vault Treasury Account"
-      accountFactoryCid; holdingFactory; observers = [alice]
+      label = "Treasury@Bank"; description = "Vault Treasury Account (holds LNRD)"
+      accountFactoryCid = bankAccountFactoryCid
+      holdingFactory = bankHoldingFactory
+      observers = [alice]
 
-  -- Credit Alice with 1,000 USD
-  aliceCreditRequestCid <- submit alice do
-    createCmd CreditAccount.Request with account = aliceAccount; instrument = depositInstrument; amount = 1000.0
-
-  aliceHoldingCid <- submit vault do
-    exerciseCmd aliceCreditRequestCid CreditAccount.Accept
-
-  -- Fund treasury with 10,000 USD
-  let treasuryInitialFunding = 10000.0
-
+  -- Fund treasury with initial LNRD from Bank
   treasuryCreditRequestCid <- submit vault do
-    createCmd CreditAccount.Request with account = treasuryAccount; instrument = depositInstrument; amount = treasuryInitialFunding
+    createCmd CreditAccount.Request with 
+      account = treasuryAccount
+      instrument = depositInstrument
+      amount = treasuryInitialFunding
 
-  submit vault do
+  submit bank do
     exerciseCmd treasuryCreditRequestCid CreditAccount.Accept
 
   -- Create vault config and state
@@ -89,48 +106,62 @@ setupVault = do
   vaultConfigCid <- submit vault do
     createCmd VaultConfig with
       operator = vault; custodian = vault; vaultId = vaultId
-      name = "Test Vault"; description = "A test vault for stablecoin deposits"
+      name = "LNRD Vault"; description = "A vault for LNRD (Lunar Dollar) deposits"
       depositInstrument; shareInstrument; treasuryAccount
       minDepositAmount = 100.0; baseFee = 0.01; observers = [alice]
 
   submit vault do
     createCmd VaultState with
       operator = vault; custodian = vault; vaultId = vaultId
-      configCid = vaultConfigCid; totalAssets = treasuryInitialFunding
+      configCid = vaultConfigCid
+      totalAssets = treasuryInitialFunding  -- Initial LNRD funding
       totalShares = 0.0; sharePrice = 1.0; observers = [alice]
 
+  -- Return test state
   pure VaultTestState with
     alice; vault; aliceAccount; treasuryAccount
-    depositInstrument; shareInstrument; vaultId; vaultConfigCid; aliceHoldingCid
+    depositInstrument; shareInstrument; vaultId; vaultConfigCid
 
 -- | Setup script using existing parties (for when parties are already allocated)
+-- NOTE: Requires Lunar Dollar setup to have run first.
 setupVaultExisting : Script VaultTestState
 setupVaultExisting = do
-  -- Get existing parties
+  -- Get existing parties (Alice and Bank from lunar-dollar, Vault may be new)
   alice <- getPartyByName "Alice"
   vault <- getPartyByName "Vault"
+  bank <- getPartyByName "Bank"
 
-  -- Create factories
-  accountFactoryCid <- toInterfaceContractId @AccountFactory.I <$> submit vault do
+  -- Create Bank's account factory for Vault's treasury (to hold LNRD)
+  bankAccountFactoryCid <- toInterfaceContractId @AccountFactory.I <$> submit bank do
+    createCmd Account.Factory with provider = bank; observers = mempty
+
+  bankHoldingFactory <- createHoldingFactory
+    Holding.Factory with 
+      provider = bank
+      id = Id "Bank Holding Factory for Vault"
+      observers = Map.fromList [("VaultObservers", Set.fromList [vault, alice])]
+
+  -- Create Vault's factories (for VAULT-SHARE holdings)
+  vaultAccountFactoryCid <- toInterfaceContractId @AccountFactory.I <$> submit vault do
     createCmd Account.Factory with provider = vault; observers = mempty
 
-  holdingFactory <- createHoldingFactory
-    Holding.Factory with provider = vault; id = Id "Holding Factory"; observers = mempty
+  vaultHoldingFactory <- createHoldingFactory
+    Holding.Factory with provider = vault; id = Id "Vault Holding Factory"; observers = mempty
 
   tokenFactoryCid <- toInterfaceContractId @TokenFactory.I <$> submit vault do
     createCmd Token.Factory with provider = vault; observers = mempty
 
-  -- Create instruments
   now <- getTime
 
+  -- Use LNRD as the deposit instrument (issued by Bank from lunar-dollar)
   let depositInstrument = InstrumentKey with
-        issuer = vault; depository = vault; id = Id "USD"; version = "0"; holdingStandard = TransferableFungible
+        issuer = bank
+        depository = bank
+        id = Id "LNRD"
+        version = "0"
+        holdingStandard = TransferableFungible
 
-  submit vault do
-    exerciseCmd tokenFactoryCid TokenFactory.Create with
-      token = Token with instrument = depositInstrument; description = "USD Stablecoin"; validAsOf = now
-      observers = mempty
-
+  -- Create VAULT-SHARE instrument (issued by Vault)
   let shareInstrument = InstrumentKey with
         issuer = vault; depository = vault; id = Id "VAULT-SHARE"; version = "0"; holdingStandard = TransferableFungible
 
@@ -139,37 +170,34 @@ setupVaultExisting = do
       token = Token with instrument = shareInstrument; description = "Vault Share Token"; validAsOf = now
       observers = mempty
 
-  -- Create accounts
+  -- Create Alice's account at Vault (for VAULT-SHARE holdings)
   aliceRequestCid <- submit alice do
     createCmd CreateAccount.Request with owner = alice; custodian = vault
 
   aliceAccount <- submit vault do
     exerciseCmd aliceRequestCid CreateAccount.Accept with
       label = "Alice@Vault"; description = "Alice's account at Vault"
-      accountFactoryCid; holdingFactory; observers = []
+      accountFactoryCid = vaultAccountFactoryCid; holdingFactory = vaultHoldingFactory; observers = []
 
+  -- Create treasury account at Bank (for LNRD holdings)
   treasuryRequestCid <- submit vault do
-    createCmd CreateAccount.Request with owner = vault; custodian = vault
+    createCmd CreateAccount.Request with owner = vault; custodian = bank
 
-  treasuryAccount <- submit vault do
+  treasuryAccount <- submit bank do
     exerciseCmd treasuryRequestCid CreateAccount.Accept with
-      label = "Treasury@Vault"; description = "Vault Treasury Account"
-      accountFactoryCid; holdingFactory; observers = [alice]
+      label = "Treasury@Bank"; description = "Vault Treasury Account (holds LNRD)"
+      accountFactoryCid = bankAccountFactoryCid
+      holdingFactory = bankHoldingFactory
+      observers = [alice]
 
-  -- Credit Alice with 1,000 USD
-  aliceCreditRequestCid <- submit alice do
-    createCmd CreditAccount.Request with account = aliceAccount; instrument = depositInstrument; amount = 1000.0
-
-  aliceHoldingCid <- submit vault do
-    exerciseCmd aliceCreditRequestCid CreditAccount.Accept
-
-  -- Fund treasury with 10,000 USD
-  let treasuryInitialFunding = 10000.0
-  
+  -- Fund treasury with initial LNRD from Bank
   treasuryCreditRequestCid <- submit vault do
-    createCmd CreditAccount.Request with account = treasuryAccount; instrument = depositInstrument; amount = treasuryInitialFunding
+    createCmd CreditAccount.Request with 
+      account = treasuryAccount
+      instrument = depositInstrument
+      amount = treasuryInitialFunding
 
-  submit vault do
+  submit bank do
     exerciseCmd treasuryCreditRequestCid CreditAccount.Accept
 
   -- Create vault config and state
@@ -178,28 +206,29 @@ setupVaultExisting = do
   vaultConfigCid <- submit vault do
     createCmd VaultConfig with
       operator = vault; custodian = vault; vaultId = vaultId
-      name = "Test Vault"; description = "A test vault for stablecoin deposits"
+      name = "LNRD Vault"; description = "A vault for LNRD (Lunar Dollar) deposits"
       depositInstrument; shareInstrument; treasuryAccount
       minDepositAmount = 100.0; baseFee = 0.01; observers = [alice]
 
   submit vault do
     createCmd VaultState with
       operator = vault; custodian = vault; vaultId = vaultId
-      configCid = vaultConfigCid; totalAssets = treasuryInitialFunding
+      configCid = vaultConfigCid
+      totalAssets = treasuryInitialFunding
       totalShares = 0.0; sharePrice = 1.0; observers = [alice]
 
   pure VaultTestState with
     alice; vault; aliceAccount; treasuryAccount
-    depositInstrument; shareInstrument; vaultId; vaultConfigCid; aliceHoldingCid
+    depositInstrument; shareInstrument; vaultId; vaultConfigCid
 
+-- | Test state returned by setup scripts
 data VaultTestState = VaultTestState
   with
     alice : Party
     vault : Party
     aliceAccount : AccountKey
     treasuryAccount : AccountKey
-    depositInstrument : InstrumentKey
-    shareInstrument : InstrumentKey
+    depositInstrument : InstrumentKey  -- LNRD (from Bank)
+    shareInstrument : InstrumentKey    -- VAULT-SHARE (from Vault)
     vaultId : Id
     vaultConfigCid : ContractId VaultConfig
-    aliceHoldingCid : ContractId Holding.I

@@ -52,23 +52,11 @@ export function CreditAccountRequestList() {
   }, [accounts]);
 
   // Auto-fill instrument details based on preset selection
-  const handleInstrumentPreset = (preset: 'LNRD' | 'USD' | 'VAULT-SHARE' | 'custom') => {
+  const handleInstrumentPreset = (preset: 'LNRD' | 'custom') => {
     if (preset === 'LNRD' && knownParties.bank) {
       setInstrumentDepository(knownParties.bank);
       setInstrumentIssuer(knownParties.bank);
       setInstrumentId('LNRD');
-      setInstrumentVersion('0');
-      setHoldingStandard('TransferableFungible');
-    } else if (preset === 'USD' && knownParties.vault) {
-      setInstrumentDepository(knownParties.vault);
-      setInstrumentIssuer(knownParties.vault);
-      setInstrumentId('USD');
-      setInstrumentVersion('0');
-      setHoldingStandard('TransferableFungible');
-    } else if (preset === 'VAULT-SHARE' && knownParties.vault) {
-      setInstrumentDepository(knownParties.vault);
-      setInstrumentIssuer(knownParties.vault);
-      setInstrumentId('VAULT-SHARE');
       setInstrumentVersion('0');
       setHoldingStandard('TransferableFungible');
     } else {
@@ -212,9 +200,9 @@ export function CreditAccountRequestList() {
               disabled={loadingAccounts}
             />
             
-            {/* Instrument Presets */}
+            {/* Instrument Selection - LNRD only */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Quick Select Instrument</label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Instrument</label>
               <div className="flex gap-2 flex-wrap">
                 <Button 
                   type="button" 
@@ -222,29 +210,9 @@ export function CreditAccountRequestList() {
                   variant={instrumentId === 'LNRD' ? 'primary' : 'secondary'}
                   onClick={() => handleInstrumentPreset('LNRD')}
                   disabled={!knownParties.bank}
-                  title={knownParties.bank ? 'Lunar Dollars (Bank)' : 'Bank party not found'}
+                  title={knownParties.bank ? 'Lunar Dollars (Bank)' : 'Bank party not found - run setup'}
                 >
-                  🌙 LNRD
-                </Button>
-                <Button 
-                  type="button" 
-                  size="sm" 
-                  variant={instrumentId === 'USD' ? 'primary' : 'secondary'}
-                  onClick={() => handleInstrumentPreset('USD')}
-                  disabled={!knownParties.vault}
-                  title={knownParties.vault ? 'USD Stablecoin (Vault)' : 'Vault party not found'}
-                >
-                  💵 USD
-                </Button>
-                <Button 
-                  type="button" 
-                  size="sm" 
-                  variant={instrumentId === 'VAULT-SHARE' ? 'primary' : 'secondary'}
-                  onClick={() => handleInstrumentPreset('VAULT-SHARE')}
-                  disabled={!knownParties.vault}
-                  title={knownParties.vault ? 'Vault Shares (Vault)' : 'Vault party not found'}
-                >
-                  🏦 VAULT-SHARE
+                  🌙 LNRD (Lunar Dollars)
                 </Button>
                 <Button 
                   type="button" 
@@ -255,6 +223,9 @@ export function CreditAccountRequestList() {
                   ✏️ Custom
                 </Button>
               </div>
+              {!knownParties.bank && (
+                <p className="text-xs text-amber-400 mt-1">Bank party not found. Make sure lunar-dollar setup has run.</p>
+              )}
             </div>
 
             <Input
@@ -421,9 +392,9 @@ export function CreditAccountRequestList() {
             disabled={loadingAccounts}
           />
           
-          {/* Instrument Presets */}
+          {/* Instrument Selection - LNRD only */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Quick Select Instrument</label>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Instrument</label>
             <div className="flex gap-2 flex-wrap">
               <Button 
                 type="button" 
@@ -431,29 +402,9 @@ export function CreditAccountRequestList() {
                 variant={instrumentId === 'LNRD' ? 'primary' : 'secondary'}
                 onClick={() => handleInstrumentPreset('LNRD')}
                 disabled={!knownParties.bank}
-                title={knownParties.bank ? 'Lunar Dollars (Bank)' : 'Bank party not found'}
+                title={knownParties.bank ? 'Lunar Dollars (Bank)' : 'Bank party not found - run setup'}
               >
-                🌙 LNRD
-              </Button>
-              <Button 
-                type="button" 
-                size="sm" 
-                variant={instrumentId === 'USD' ? 'primary' : 'secondary'}
-                onClick={() => handleInstrumentPreset('USD')}
-                disabled={!knownParties.vault}
-                title={knownParties.vault ? 'USD Stablecoin (Vault)' : 'Vault party not found'}
-              >
-                💵 USD
-              </Button>
-              <Button 
-                type="button" 
-                size="sm" 
-                variant={instrumentId === 'VAULT-SHARE' ? 'primary' : 'secondary'}
-                onClick={() => handleInstrumentPreset('VAULT-SHARE')}
-                disabled={!knownParties.vault}
-                title={knownParties.vault ? 'Vault Shares (Vault)' : 'Vault party not found'}
-              >
-                🏦 VAULT-SHARE
+                🌙 LNRD (Lunar Dollars)
               </Button>
               <Button 
                 type="button" 
@@ -464,6 +415,9 @@ export function CreditAccountRequestList() {
                 ✏️ Custom
               </Button>
             </div>
+            {!knownParties.bank && (
+              <p className="text-xs text-amber-400 mt-1">Bank party not found. Make sure lunar-dollar setup has run.</p>
+            )}
           </div>
 
           <Input

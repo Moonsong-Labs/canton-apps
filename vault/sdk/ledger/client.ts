@@ -269,12 +269,14 @@ export class CantonLedgerClient implements LedgerConnection {
   /**
    * Exercise a choice on a contract.
    * Template IDs are automatically resolved from package names to hashes.
+   * @param actAs - Optional array of parties to act as (defaults to client's party)
    */
   async exercise<T, R>(
     templateId: string,
     contractId: ContractId<T>,
     choice: string,
-    args: unknown
+    args: unknown,
+    actAs?: Party[]
   ): Promise<ExerciseResult<R>> {
     // Resolve package name to hash
     const resolvedTemplateId = await this.resolveTemplateId(templateId);
@@ -287,7 +289,7 @@ export class CantonLedgerClient implements LedgerConnection {
         choice,
         argument: args,
         meta: {
-          actAs: [this.party],
+          actAs: actAs || [this.party],
         },
       }),
     });

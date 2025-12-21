@@ -12,28 +12,30 @@ import Daml.Finance.Interface.Util.V3.Common (qty)
 template RedeemRequest
   with
     redeemer : Party
-    redeemerAccount : AccountKey
+    shareAccount : AccountKey       -- Account holding VAULT-SHARE (at Vault)
+    lnrdAccount : AccountKey        -- Account to receive LNRD (at Bank)
     operator : Party
-    custodian : Party
+    shareCustodian : Party          -- Custodian for VAULT-SHARE (Vault)
+    lnrdCustodian : Party           -- Custodian for LNRD (Bank)
     vaultId : Id
     sharesAmount : Decimal
     shareHoldingCid : ContractId Holding.I
   where
     signatory redeemer
-    observer operator, custodian
+    observer operator, shareCustodian, lnrdCustodian
 
     ensure sharesAmount > 0.0
 
     choice Accept : (ContractId VaultState, ContractId Holding.I)
-      controller operator, custodian
+      controller operator, shareCustodian
       do
         -- Fetch vault configuration
         (_, vaultConfig) <- fetchByKey @VaultConfig (operator, vaultId)
 
-        -- Step 1: Burn shares
+        -- Step 1: Burn shares from share account (at Vault)
         Account.exerciseInterfaceByKey @Account.I
-          redeemerAccount
-          custodian
+          shareAccount
+          shareCustodian
           Account.Debit with
             holdingCid = shareHoldingCid
 
@@ -46,10 +48,10 @@ template RedeemRequest
         let feeAmount = redemptionAmount * vaultConfig.baseFee
         let userAmount = redemptionAmount - feeAmount
 
-        -- Step 4: Credit stablecoin to user's account (minus fee)
+        -- Step 4: Credit LNRD to user's Bank account (minus fee)
         stablecoinHoldingCid <- Account.exerciseInterfaceByKey @Account.I
-          redeemerAccount
-          custodian
+          lnrdAccount
+          lnrdCustodian
           Account.Credit with
             quantity = qty userAmount vaultConfig.depositInstrument
 
@@ -57,7 +59,7 @@ template RedeemRequest
         when (feeAmount > 0.0) do
           _ <- Account.exerciseInterfaceByKey @Account.I
             vaultConfig.treasuryAccount
-            custodian
+            lnrdCustodian
             Account.Credit with
               quantity = qty feeAmount vaultConfig.depositInstrument
           pure ()

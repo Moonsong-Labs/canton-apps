@@ -13,6 +13,7 @@ redeem : Script ()
 redeem = do
   alice <- getPartyByName "Alice"
   vault <- getPartyByName "Vault"
+  bank <- getPartyByName "Bank"
   let vaultId = Id "vault-101"
 
   let
@@ -22,18 +23,23 @@ redeem = do
       id = Id "VAULT-SHARE"
       version = "0"
       holdingStandard = TransferableFungible
-      
+
     depositInstrument = InstrumentKey with
-      issuer = vault
-      depository = vault
-      id = Id "USD"
+      issuer = bank
+      depository = bank
+      id = Id "LNRD"
       version = "0"
       holdingStandard = TransferableFungible
       
-    aliceAccount = AccountKey with
+    aliceShareAccount = AccountKey with
       custodian = vault
       owner = alice
       id = Id "Alice@Vault"
+
+    aliceLnrdAccount = AccountKey with
+      custodian = bank
+      owner = alice
+      id = Id "Alice's Account"
 
   (shareHoldingCid, shareHoldingView) <- getHoldingWithView alice shareInstrument
 
@@ -44,9 +50,11 @@ redeem = do
   redeemRequestCid <- submit alice do
     createCmd RedeemRequest with
       redeemer = alice
-      redeemerAccount = aliceAccount
+      shareAccount = aliceShareAccount
+      lnrdAccount = aliceLnrdAccount
       operator = vault
-      custodian = vault
+      shareCustodian = vault
+      lnrdCustodian = bank
       vaultId = vaultId
       sharesAmount = redeemAmount
       shareHoldingCid = shareHoldingCid
@@ -57,7 +65,7 @@ redeem = do
   stablecoinView <- submit alice do
     exerciseCmd aliceStablecoinHoldingCid Holding.GetView with viewer = alice
 
-  assertMsg "Holding should be USD instrument" (stablecoinView.instrument == depositInstrument)
+  assertMsg "Holding should be LNRD instrument" (stablecoinView.instrument == depositInstrument)
 
   Some (_, vaultConfig) <- queryContractKey @VaultConfig vault (vault, vaultId)
   Some (_, vaultState) <- queryContractKey @VaultState vault (vault, vaultId)
@@ -70,7 +78,7 @@ redeem = do
 
   debug "=== Redemption Complete ==="
   debug $ "Alice redeemed: " <> show redeemAmount <> " shares"
-  debug $ "Redemption amount (before fee): " <> show redemptionAmount <> " USD"
-  debug $ "Fee (" <> show (vaultConfig.baseFee * 100.0) <> "%): " <> show (redemptionAmount * vaultConfig.baseFee) <> " USD"
-  debug $ "Alice received: " <> show stablecoinView.amount <> " USD"
+  debug $ "Redemption amount (before fee): " <> show redemptionAmount <> " LNRD"
+  debug $ "Fee (" <> show (vaultConfig.baseFee * 100.0) <> "%): " <> show (redemptionAmount * vaultConfig.baseFee) <> " LNRD"
+  debug $ "Alice received: " <> show stablecoinView.amount <> " LNRD"
   debug $ "Share Price: " <> show vaultState.sharePrice

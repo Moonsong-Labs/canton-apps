@@ -37,7 +37,7 @@ template DepositRequest
         -- Step 1: Transfer deposited funds to treasury account
         let transferableCid = coerceInterfaceContractId @Transferable.I depositHoldingCid
         _treasuryHoldingCid <- exercise transferableCid Transferable.Transfer with
-          actors = fromList [depositor, custodian]
+          actors = fromList [depositor, custodian, operator]
           newOwnerAccount = vaultConfig.treasuryAccount
 
         -- Step 2: Process deposit and get amount of shares to mint      
@@ -49,7 +49,7 @@ template DepositRequest
         -- Step 3: Mint shares to depositor
         shareHoldingCid <- Account.exerciseInterfaceByKey @Account.I
           depositorAccount
-          custodian
+          depositorAccount.custodian
           Account.Credit with
             quantity = qty sharesToMint vaultConfig.shareInstrument
 

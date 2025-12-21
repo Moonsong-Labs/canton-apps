@@ -122,6 +122,10 @@ export function MakeDepositForm({ isOpen, onClose }: MakeDepositFormProps) {
     }
 
     try {
+      // Use the holding's custodian (Bank for LNRD), not the vault's custodian
+      // This is required for the Transferable.Transfer to work
+      const holdingCustodian = selectedHolding.payload.account?.custodian;
+      
       await createDepositRequest.mutateAsync({
         depositor: party,
         depositorAccount: {
@@ -130,7 +134,7 @@ export function MakeDepositForm({ isOpen, onClose }: MakeDepositFormProps) {
           id: userAccount.payload.id
         },
         operator: selectedVault.payload.operator,
-        custodian: selectedVault.payload.custodian,
+        custodian: holdingCustodian,  // Must match holding's custodian
         vaultId: selectedVault.payload.vaultId,
         amount: amount,
         depositHoldingCid: selectedHolding.contractId
