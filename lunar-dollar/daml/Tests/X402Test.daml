@@ -2,38 +2,17 @@ module Tests.X402Test where
 
 import Daml.Script
 import DA.Map qualified as Map (fromList)
-import DA.Set qualified as Set
 
 import Scripts.Setup (setup)
 import Scripts.Mint (MintArgs(..), mint)
 import Scripts.Balance (BalanceArgs(..), balance)
 import Scripts.Util (getOrCreateParty, lookupParty)
 import Scripts.X402 (SetupReceiverArgs(..), PayArgs(..), setupReceiver, pay)
-import Compliance.Registry (ComplianceRegistry(..))
-import Compliance.Validators.Blacklist (BlacklistValidator(..))
-import Compliance.Validator (TransferValidator)
-
-setupCompliance : Script (ContractId ComplianceRegistry)
-setupCompliance = do
-  bank <- lookupParty "Bank"
-  
-  blacklistCid <- submit bank do
-    createCmd BlacklistValidator with
-      operator = bank
-      blacklistedParties = Set.empty
-  
-  let blacklistInterfaceCid = toInterfaceContractId @TransferValidator blacklistCid
-  
-  submit bank do
-    createCmd ComplianceRegistry with
-      operator = bank
-      activeValidators = [blacklistInterfaceCid]
 
 testX402PaymentFlow : Script ()
 testX402PaymentFlow = do
   setup
   publicParty <- getOrCreateParty "Public"
-  complianceRegistryCid <- setupCompliance
 
   debug "=== x402 Payment Flow Test ==="
   
@@ -51,7 +30,6 @@ testX402PaymentFlow = do
       , ("/api/basic-data", 5.0)
       ]
     publicParty
-    complianceRegistryCid
 
   debug "2. Bob created PaymentReceiver with price list"
 
@@ -75,8 +53,8 @@ testX402PaymentFlow = do
 
 runPayment : Script ()
 runPayment = do
+  setup
   alice <- lookupParty "Alice"
-  complianceRegistryCid <- setupCompliance
 
   holdingCid <- mint MintArgs with
     recipient = "Alice"
@@ -86,7 +64,6 @@ runPayment = do
     receiver = "Bob"
     prices = Map.fromList [("random", 250.0)]
     publicParty = alice
-    complianceRegistryCid
 
   accessGrantCid <- pay PayArgs with
     payer = "Alice"
@@ -106,7 +83,6 @@ testX402PaymentWithSplit : Script ()
 testX402PaymentWithSplit = do
   setup
   publicParty <- getOrCreateParty "Public"
-  complianceRegistryCid <- setupCompliance
 
   debug "=== x402 Payment With Split Test ==="
 
@@ -120,7 +96,6 @@ testX402PaymentWithSplit = do
       [ ("/api/expensive-resource", 25.0)
       ]
     publicParty
-    complianceRegistryCid
 
   debug "Alice paying for /api/expensive-resource (price: 25 LNRD)"
 

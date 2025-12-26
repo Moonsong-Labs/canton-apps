@@ -2,15 +2,13 @@ module Scripts.Setup where
 
 import Daml.Script
 import DA.Map qualified as Map (fromList)
-import DA.Set qualified as Set (fromList)
+import DA.Set qualified as Set (fromList, empty)
 
--- INTERFACE DEPENDENCIES --
 import Daml.Finance.Interface.Account.V4.Factory qualified as AccountFactory (I)
 import Daml.Finance.Interface.Instrument.Token.V4.Factory qualified as TokenFactory (Create(..), I)
 import Daml.Finance.Interface.Instrument.Token.V4.Types (Token(..))
 import Daml.Finance.Interface.Types.Common.V3.Types (Id(..), HoldingStandard(..), InstrumentKey(..))
 
--- IMPLEMENTATION DEPENDENCIES --
 import Daml.Finance.Account.V4.Account qualified as Account (Factory(..))
 import Daml.Finance.Holding.V4.Factory qualified as Holding (Factory(..))
 import Daml.Finance.Instrument.Token.V4.Factory qualified as Token (Factory(..))
@@ -18,10 +16,15 @@ import Daml.Finance.Instrument.Token.V4.Factory qualified as Token (Factory(..))
 import Scripts.Util (createHoldingFactory, getOrCreateParty, createBankAccount)
 
 import LunarDollar
+import Compliance.Registry (ComplianceRegistry(..))
+import Compliance.Reference (ComplianceReference(..))
+import Compliance.Validator (TransferValidator)
+import Compliance.Validators.Blacklist (BlacklistValidator(..))
 
 setup = script do
   [bank, alice, bob, public, vault] <- mapA getOrCreateParty ["Bank", "Alice", "Bob", "Public", "Vault"]
   debug $ "Public party: " <> show public
+  
   accountFactoryCid <- toInterfaceContractId @AccountFactory.I <$> submit bank do
     createCmd Account.Factory with
       provider = bank
@@ -40,6 +43,26 @@ setup = script do
   
   aliceAccountCid <- createBankAccount bank holdingFactory accountFactoryCid alice "Alice's Account" [bob]
   bobAccountCid <- createBankAccount bank holdingFactory accountFactoryCid bob "Bob's Account" [alice]
+
+  blacklistValidatorCid <- submit bank do
+    createCmd BlacklistValidator with
+      operator = bank
+      blacklistedParties = Set.empty
+  
+  let blacklistInterfaceCid = toInterfaceContractId @TransferValidator blacklistValidatorCid
+
+  complianceRegistryCid <- submit bank do
+    createCmd ComplianceRegistry with
+      operator = bank
+      activeValidators = [blacklistInterfaceCid]
+
+  submit bank do
+    createCmd ComplianceReference with
+      operator = bank
+      publicParty = public
+      complianceRegistryCid
+
+  debug $ "Created compliance registry with blacklist validator and public reference"
 
   let
     instrumentId = Id "LNRD"
@@ -63,5 +86,9 @@ setup = script do
   submit bank do
     createCmd LunarDollar with
       instrumentKey = instrumentKey
+      complianceRegistryCid
+      publicParty = public
+
+  debug $ "Created LunarDollar with compliance registry attached"
 
   pure ()

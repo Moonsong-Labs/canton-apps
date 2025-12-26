@@ -4,11 +4,9 @@ import DA.Map qualified as Map (lookup)
 import DA.Map (Map)
 import DA.Optional (fromSome)
 
-import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
 import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), InstrumentKey)
 
-import TransferRequest (TransferRequest(..), Accept(..))
-import Compliance.Registry (ComplianceRegistry)
+import TransferRequest (TransferRequest(..))
 
 template AccessGrant
   with
@@ -35,7 +33,6 @@ template PaymentReceiver
     instrumentKey : InstrumentKey
     prices : Map Text Decimal
     publicParty : Party
-    complianceRegistryCid : ContractId ComplianceRegistry
   where
     signatory receiver
     observer publicParty
@@ -43,13 +40,11 @@ template PaymentReceiver
     key receiver : Party
     maintainer key
 
-    nonconsuming choice Pay : ContractId AccessGrant
+    nonconsuming choice RequestPayment : (ContractId TransferRequest, Decimal)
       with
         payer : Party
-        sessionId : Text
         resource : Text
         maxPrice : Decimal
-        holdingCid : ContractId Holding.I
       controller payer
       do
         let price = fromSome $ Map.lookup resource prices
@@ -60,10 +55,16 @@ template PaymentReceiver
           instrument = instrumentKey
           amount = price
           currentOwner = payer
-          complianceRegistryCid
 
-        _ <- exercise transferReqCid Accept with holdingCid
+        pure (transferReqCid, price)
 
+    nonconsuming choice GrantAccess : ContractId AccessGrant
+      with
+        payer : Party
+        sessionId : Text
+        resource : Text
+      controller payer, receiver
+      do
         currentTime <- getTime
         create AccessGrant with
           receiver

@@ -23,7 +23,6 @@ interface HoldingContract {
   payload: Holding_TransferableFungible.Payload;
 }
 
-// Helper to shorten party IDs for display
 function shortenParty(party: string): string {
   if (party.includes('::')) {
     const [name] = party.split('::');
@@ -37,28 +36,23 @@ export function LunarDollarTransfers() {
   const client = useLedgerClient();
   const queryClient = useQueryClient();
 
-  // Form state
   const [receiverName, setReceiverName] = useState('');
   const [amount, setAmount] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [acceptError, setAcceptError] = useState<{ id: string; message: string } | null>(null);
   const [decliningId, setDecliningId] = useState<string | null>(null);
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
 
-  // Query transfer requests
   const { data: transferRequests, isLoading: loadingRequests } = useContractQuery<TransferRequest.Payload>(
     TemplateIds.TransferRequest
   );
 
-  // Query holdings for accepting transfers
   const { data: holdings, isLoading: loadingHoldings } = useContractQuery<Holding_TransferableFungible.Payload>(
     TemplateIds.Holding_TransferableFungible
   );
 
-  // Get instrument key from holdings only
-  // (LunarDollar contract is only visible to Bank, not to regular users)
-  // We only trust holdings because they have the correct full party IDs
   const getInstrumentKeyFromHoldings = (): InstrumentKey | null => {
     const holdingsList = holdings as HoldingContract[] || [];
     const lnrdHolding = holdingsList.find(h => h.payload.instrument?.id?.unpack === 'LNRD');
@@ -66,12 +60,10 @@ export function LunarDollarTransfers() {
     return null;
   };
 
-  // Get only LNRD holdings
   const lnrdHoldings = (holdings as HoldingContract[] || []).filter(
     h => h.payload.instrument?.id?.unpack === 'LNRD'
   );
 
-  // Separate incoming (I need to accept) and outgoing (I created) requests
   const incomingRequests = (transferRequests as TransferRequestContract[] || []).filter(
     r => r.payload.currentOwner === party
   );
@@ -79,28 +71,23 @@ export function LunarDollarTransfers() {
     r => r.payload.receiverAccount?.owner === party
   );
 
-  // Calculate total LNRD balance
   const totalBalance = lnrdHoldings.reduce((sum, h) => {
     const amt = typeof h.payload.amount === 'string' ? parseFloat(h.payload.amount) : h.payload.amount;
     return sum + (amt || 0);
   }, 0);
 
-  // Find a suitable LNRD holding to use for transfer
   const findHoldingForAmount = (requestAmount: number): HoldingContract | null => {
-    // First try to find an exact match
     const exact = lnrdHoldings.find(h => {
       const amt = typeof h.payload.amount === 'string' ? parseFloat(h.payload.amount) : h.payload.amount;
       return amt === requestAmount;
     });
     if (exact) return exact;
-    // Otherwise find one with enough balance
     return lnrdHoldings.find(h => {
       const amt = typeof h.payload.amount === 'string' ? parseFloat(h.payload.amount) : h.payload.amount;
       return amt >= requestAmount;
     }) || null;
   };
 
-  // Create a new transfer request
   const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!client || !party || !receiverName || !amount) return;
@@ -109,14 +96,11 @@ export function LunarDollarTransfers() {
     setCreateError(null);
 
     try {
-      // Get the LNRD instrument key from holdings (they have correct full party IDs)
       let instrumentKey = getInstrumentKeyFromHoldings();
       
-      // Query accounts to find the sender's account and get bank info
       const accounts = await client.query<{ owner: Party; custodian: Party; id: Id }>(TemplateIds.Account, {});
       const accountList = accounts as unknown as { contractId: string; payload: { owner: Party; custodian: Party; id: Id } }[];
       
-      // Find the sender's account (the party we're requesting FROM)
       const senderAccount = accountList?.find(a => {
         const ownerName = shortenParty(a.payload.owner);
         return ownerName.toLowerCase() === receiverName.toLowerCase();
@@ -126,8 +110,6 @@ export function LunarDollarTransfers() {
         throw new Error(`Could not find account for "${receiverName}". Make sure the party exists and has an account.`);
       }
 
-      // If we don't have an instrument key yet, construct a default LNRD key
-      // using the Bank as issuer/depository (custodian from accounts)
       if (!instrumentKey) {
         const bankParty = senderAccount.payload.custodian;
         instrumentKey = {
@@ -139,7 +121,6 @@ export function LunarDollarTransfers() {
         } as InstrumentKey;
       }
 
-      // Find our own account
       const myAccount = accountList?.find(a => {
         return a.payload.owner === party;
       });
@@ -148,8 +129,6 @@ export function LunarDollarTransfers() {
         throw new Error('Could not find your account. Make sure you have an account set up.');
       }
 
-      // Create the transfer request (as the receiver requesting funds)
-      // Note: In this flow, the current user is requesting TO RECEIVE funds
       const payload: TransferRequest.Payload = {
         receiverAccount: {
           custodian: myAccount.payload.custodian,
@@ -163,10 +142,8 @@ export function LunarDollarTransfers() {
 
       await client.create(TemplateIds.TransferRequest, payload);
       
-      // Refresh queries
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.contracts(TemplateIds.TransferRequest, party || undefined) });
       
-      // Reset form
       setReceiverName('');
       setAmount('');
     } catch (err) {
@@ -176,7 +153,6 @@ export function LunarDollarTransfers() {
     }
   };
 
-  // Check if two instrument keys match (comparing issuer/depository)
   const instrumentKeysMatch = (a: InstrumentKey | undefined, b: InstrumentKey | undefined): boolean => {
     if (!a || !b) return false;
     return a.issuer === b.issuer && 
@@ -185,9 +161,24 @@ export function LunarDollarTransfers() {
            a.version === b.version;
   };
 
-  // Accept an incoming transfer request
+  const parseComplianceError = (errorMsg: string): string => {
+    // Try to extract the compliance rejection reason from the error message
+    const complianceMatch = errorMsg.match(/Transfer rejected by compliance:\s*\[([^\]]+)\]/i);
+    if (complianceMatch) {
+      return complianceMatch[1].replace(/"/g, '');
+    }
+    const blacklistMatch = errorMsg.match(/(Sender|Receiver) is blacklisted/i);
+    if (blacklistMatch) {
+      return `${blacklistMatch[1]} is blacklisted`;
+    }
+    return errorMsg;
+  };
+
   const handleAccept = async (request: TransferRequestContract) => {
     if (!client) return;
+
+    // Clear any previous error for this request
+    setAcceptError(null);
 
     const requestAmount = typeof request.payload.amount === 'string' 
       ? parseFloat(request.payload.amount) 
@@ -195,42 +186,69 @@ export function LunarDollarTransfers() {
 
     const holding = findHoldingForAmount(requestAmount);
     if (!holding) {
-      alert(`Insufficient balance to accept this transfer. You need at least ${requestAmount} LNRD.`);
+      setAcceptError({
+        id: request.contractId,
+        message: `Insufficient balance. You need at least ${requestAmount} LNRD.`
+      });
       return;
     }
 
-    // Check if instrument keys match - they must match exactly for the transfer to work
     if (!instrumentKeysMatch(request.payload.instrument, holding.payload.instrument)) {
-      alert(
-        `⚠️ Instrument key mismatch!\n\n` +
-        `This transfer request was created with incorrect party IDs and cannot be accepted.\n\n` +
-        `Request issuer: ${request.payload.instrument?.issuer}\n` +
-        `Holding issuer: ${holding.payload.instrument?.issuer}\n\n` +
-        `Please DECLINE this request. The sender needs to create a new transfer request.`
-      );
+      setAcceptError({
+        id: request.contractId,
+        message: `Instrument key mismatch. Please DECLINE this request - the sender needs to create a new transfer request.`
+      });
+      return;
+    }
+
+    const bankParty = request.payload.instrument?.issuer;
+    const senderParty = request.payload.currentOwner;
+    
+    if (!bankParty) {
+      setAcceptError({
+        id: request.contractId,
+        message: 'Cannot determine Bank party from instrument.'
+      });
+      return;
+    }
+    if (!senderParty) {
+      setAcceptError({
+        id: request.contractId,
+        message: 'Cannot determine sender party.'
+      });
       return;
     }
 
     setAcceptingId(request.contractId);
     try {
+      // Accept requires both currentOwner (sender) AND instrument.issuer (Bank)
       await client.exercise(
         TemplateIds.TransferRequest,
         request.contractId as ContractId<TransferRequest.Payload>,
         'Accept',
-        { holdingCid: holding.contractId }
+        { holdingCid: holding.contractId },
+        [senderParty as Party, bankParty as Party]
       );
       
-      // Refresh queries
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.contracts(TemplateIds.TransferRequest, party || undefined) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.contracts(TemplateIds.Holding_TransferableFungible, party || undefined) });
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to accept transfer');
+      const errorMsg = err instanceof Error ? err.message : 'Failed to accept transfer';
+      const isComplianceError = errorMsg.toLowerCase().includes('compliance') || 
+                                errorMsg.toLowerCase().includes('blacklist') ||
+                                errorMsg.toLowerCase().includes('rejected');
+      
+      setAcceptError({
+        id: request.contractId,
+        message: isComplianceError 
+          ? `🚫 Blocked by compliance: ${parseComplianceError(errorMsg)}`
+          : errorMsg
+      });
     } finally {
       setAcceptingId(null);
     }
   };
 
-  // Decline an incoming transfer request
   const handleDecline = async (request: TransferRequestContract) => {
     if (!client) return;
 
@@ -251,7 +269,6 @@ export function LunarDollarTransfers() {
     }
   };
 
-  // Withdraw an outgoing transfer request
   const handleWithdraw = async (request: TransferRequestContract) => {
     if (!client) return;
 
@@ -266,7 +283,7 @@ export function LunarDollarTransfers() {
       
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.contracts(TemplateIds.TransferRequest, party || undefined) });
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to withdraw transfer');
+      alert(err instanceof Error ? err.message : 'Failed to withdraw transfer request');
     } finally {
       setWithdrawingId(null);
     }
@@ -278,41 +295,41 @@ export function LunarDollarTransfers() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-100">LNRD Transfers</h2>
-        <p className="text-slate-400">Send and receive Lunar Dollars</p>
+        <p className="text-slate-400">Request and manage Lunar Dollar transfers</p>
       </div>
 
-      {/* Balance Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <h3 className="text-sm font-medium text-slate-400 mb-2">Current Party</h3>
           {party && <PartyBadge party={party} />}
         </Card>
-        <Card className="bg-gradient-to-br from-indigo-900/30 to-purple-900/30 border-indigo-700/50">
-          <h3 className="text-sm font-medium text-slate-400 mb-2">Available Balance</h3>
-          <p className="text-2xl font-bold text-white">
-            {totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            <span className="text-lg text-indigo-300 ml-2">LNRD</span>
-          </p>
+        <Card className="bg-gradient-to-br from-emerald-900/30 to-teal-900/30 border-emerald-700/50">
+          <h3 className="text-sm font-medium text-slate-400 mb-2">Your Balance</h3>
+          <p className="text-2xl font-bold text-white">{totalBalance.toLocaleString()} LNRD</p>
         </Card>
-        <Card>
-          <h3 className="text-sm font-medium text-slate-400 mb-2">Pending Requests</h3>
-          <p className="text-2xl font-bold text-amber-400">
-            {incomingRequests.length + outgoingRequests.length}
-          </p>
+        <Card className="bg-gradient-to-br from-blue-900/30 to-indigo-900/30 border-blue-700/50">
+          <h3 className="text-sm font-medium text-slate-400 mb-2">Incoming Requests</h3>
+          <p className="text-2xl font-bold text-white">{incomingRequests.length}</p>
+        </Card>
+        <Card className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-purple-700/50">
+          <h3 className="text-sm font-medium text-slate-400 mb-2">Your Requests</h3>
+          <p className="text-2xl font-bold text-white">{outgoingRequests.length}</p>
         </Card>
       </div>
 
-      {/* Request Transfer Form */}
       <Card>
         <h3 className="text-lg font-semibold text-slate-200 mb-4">Request Transfer</h3>
         <p className="text-sm text-slate-400 mb-4">
           Request LNRD from another party. They will need to accept the request.
+          <br />
+          <span className="text-amber-400">⚠️ All transfers are subject to compliance checks (blacklist, etc.)</span>
         </p>
+        
         <form onSubmit={handleCreateRequest} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="From (Party Name)"
-              placeholder="e.g., Alice"
+              label="Request From (party name)"
+              placeholder="e.g. Alice, Bob"
               value={receiverName}
               onChange={(e) => setReceiverName(e.target.value)}
               required
@@ -320,158 +337,205 @@ export function LunarDollarTransfers() {
             <Input
               label="Amount (LNRD)"
               type="number"
-              step="0.01"
               min="0.01"
-              placeholder="e.g., 100.00"
+              step="0.01"
+              placeholder="100.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               required
             />
           </div>
+          
           {createError && (
-            <p className="text-sm text-red-400">{createError}</p>
+            <div className="p-3 bg-red-900/30 border border-red-700 rounded text-red-300 text-sm">
+              {createError}
+            </div>
           )}
-          <Button type="submit" loading={isCreating} disabled={!receiverName || !amount}>
-            Request Transfer
+          
+          <Button type="submit" disabled={isCreating || !receiverName || !amount}>
+            {isCreating ? (
+              <>
+                <Spinner className="w-4 h-4 mr-2" />
+                Creating...
+              </>
+            ) : (
+              'Create Transfer Request'
+            )}
           </Button>
         </form>
       </Card>
 
-      {isLoading ? (
-        <Card>
+      <Card>
+        <h3 className="text-lg font-semibold text-slate-200 mb-4">
+          Incoming Transfer Requests
+          <span className="ml-2 text-sm font-normal text-slate-400">
+            (others are requesting LNRD from you)
+          </span>
+        </h3>
+
+        {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Spinner />
-            <span className="ml-3 text-slate-400">Loading transfers...</span>
+            <span className="ml-3 text-slate-400">Loading...</span>
           </div>
-        </Card>
-      ) : (
-        <>
-          {/* Incoming Requests */}
-          <Card>
-            <h3 className="text-lg font-semibold text-slate-200 mb-4">
-              Incoming Requests
-              {incomingRequests.length > 0 && (
-                <span className="ml-2 px-2 py-0.5 text-xs bg-amber-600 rounded-full">
-                  {incomingRequests.length}
-                </span>
-              )}
-            </h3>
-            {incomingRequests.length === 0 ? (
-              <p className="text-slate-400 text-center py-6">No incoming transfer requests</p>
-            ) : (
-              <div className="space-y-3">
-                {incomingRequests.map((request) => {
-                  const requestAmount = typeof request.payload.amount === 'string' 
-                    ? parseFloat(request.payload.amount) 
-                    : request.payload.amount;
-                  const canAccept = totalBalance >= requestAmount;
-                  
-                  return (
-                    <div 
-                      key={request.contractId}
-                      className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg border border-slate-700"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-amber-600/20 flex items-center justify-center">
-                          <span className="text-xl">📥</span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-slate-200">
-                            {shortenParty(request.payload.receiverAccount?.owner || '')} is requesting
-                          </p>
-                          <p className="text-sm text-slate-400">
-                            {requestAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} LNRD
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="primary"
-                          onClick={() => handleAccept(request)}
-                          loading={acceptingId === request.contractId}
-                          disabled={!canAccept || !!acceptingId}
-                          title={canAccept ? 'Accept transfer' : 'Insufficient balance'}
-                        >
-                          Accept
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          onClick={() => handleDecline(request)}
-                          loading={decliningId === request.contractId}
-                          disabled={!!decliningId}
-                        >
-                          Decline
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </Card>
+        ) : incomingRequests.length === 0 ? (
+          <div className="text-center py-8 text-slate-400">
+            <div className="text-4xl mb-2">📥</div>
+            <p>No incoming transfer requests</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {incomingRequests.map((request) => {
+              const requestAmount = typeof request.payload.amount === 'string' 
+                ? parseFloat(request.payload.amount) 
+                : request.payload.amount;
+              const hasEnoughBalance = totalBalance >= requestAmount;
+              const isAccepting = acceptingId === request.contractId;
+              const isDeclining = decliningId === request.contractId;
 
-          {/* Outgoing Requests */}
-          <Card>
-            <h3 className="text-lg font-semibold text-slate-200 mb-4">
-              Outgoing Requests
-              {outgoingRequests.length > 0 && (
-                <span className="ml-2 px-2 py-0.5 text-xs bg-blue-600 rounded-full">
-                  {outgoingRequests.length}
-                </span>
-              )}
-            </h3>
-            {outgoingRequests.length === 0 ? (
-              <p className="text-slate-400 text-center py-6">No outgoing transfer requests</p>
-            ) : (
-              <div className="space-y-3">
-                {outgoingRequests.map((request) => {
-                  const requestAmount = typeof request.payload.amount === 'string' 
-                    ? parseFloat(request.payload.amount) 
-                    : request.payload.amount;
-                  
-                  return (
-                    <div 
-                      key={request.contractId}
-                      className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg border border-slate-700"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center">
-                          <span className="text-xl">📤</span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-slate-200">
-                            Requesting from {shortenParty(request.payload.currentOwner)}
-                          </p>
-                          <p className="text-sm text-slate-400">
-                            {requestAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} LNRD
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs px-2 py-1 bg-slate-700 rounded text-slate-300">
-                          Pending
+              return (
+                <div 
+                  key={request.contractId}
+                  className="p-4 bg-slate-900/50 rounded-lg border border-slate-700"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg font-semibold text-emerald-400">
+                          {requestAmount.toLocaleString()} LNRD
                         </span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleWithdraw(request)}
-                          loading={withdrawingId === request.contractId}
-                          disabled={!!withdrawingId}
+                        <span className="text-slate-400">requested by</span>
+                        <span className="font-medium text-slate-200">
+                          {shortenParty(request.payload.receiverAccount?.owner || '')}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 font-mono">
+                        {request.contractId.slice(0, 24)}...
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleDecline(request)}
+                        disabled={isDeclining}
+                      >
+                        {isDeclining ? <Spinner className="w-4 h-4" /> : 'Decline'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleAccept(request)}
+                        disabled={isAccepting || !hasEnoughBalance}
+                        title={hasEnoughBalance ? 'Accept transfer' : `Insufficient balance (need ${requestAmount} LNRD)`}
+                      >
+                        {isAccepting ? <Spinner className="w-4 h-4" /> : 'Accept'}
+                      </Button>
+                    </div>
+                  </div>
+                  {!hasEnoughBalance && (
+                    <p className="mt-2 text-sm text-amber-400">
+                      ⚠️ Insufficient balance. You have {totalBalance.toLocaleString()} LNRD but need {requestAmount.toLocaleString()}.
+                    </p>
+                  )}
+                  {acceptError?.id === request.contractId && (
+                    <div className="mt-3 p-3 bg-red-900/40 border border-red-600/50 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <span className="text-red-400 flex-shrink-0">⛔</span>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-red-300">Transfer Rejected</p>
+                          <p className="text-sm text-red-400 mt-1">{acceptError.message}</p>
+                        </div>
+                        <button 
+                          onClick={() => setAcceptError(null)}
+                          className="text-red-400 hover:text-red-300 text-lg leading-none"
                         >
-                          Withdraw
-                        </Button>
+                          ×
+                        </button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </Card>
-        </>
-      )}
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <h3 className="text-lg font-semibold text-slate-200 mb-4">
+          Your Transfer Requests
+          <span className="ml-2 text-sm font-normal text-slate-400">
+            (waiting for others to accept)
+          </span>
+        </h3>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Spinner />
+            <span className="ml-3 text-slate-400">Loading...</span>
+          </div>
+        ) : outgoingRequests.length === 0 ? (
+          <div className="text-center py-8 text-slate-400">
+            <div className="text-4xl mb-2">📤</div>
+            <p>No pending transfer requests</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {outgoingRequests.map((request) => {
+              const requestAmount = typeof request.payload.amount === 'string' 
+                ? parseFloat(request.payload.amount) 
+                : request.payload.amount;
+              const isWithdrawing = withdrawingId === request.contractId;
+
+              return (
+                <div 
+                  key={request.contractId}
+                  className="p-4 bg-slate-900/50 rounded-lg border border-slate-700"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg font-semibold text-purple-400">
+                          {requestAmount.toLocaleString()} LNRD
+                        </span>
+                        <span className="text-slate-400">from</span>
+                        <span className="font-medium text-slate-200">
+                          {shortenParty(request.payload.currentOwner || '')}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 font-mono">
+                        {request.contractId.slice(0, 24)}...
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="px-2 py-1 bg-amber-900/30 text-amber-400 rounded text-sm">
+                        Pending
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleWithdraw(request)}
+                        disabled={isWithdrawing}
+                      >
+                        {isWithdrawing ? <Spinner className="w-4 h-4" /> : 'Withdraw'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      <Card className="bg-slate-800/50 border-slate-600">
+        <h3 className="text-lg font-semibold text-slate-300 mb-2">🔒 Compliance</h3>
+        <p className="text-sm text-slate-400">
+          All LNRD transfers are automatically validated against the compliance registry attached 
+          to the LunarDollar instrument. If either the sender or receiver is blacklisted, the 
+          transfer will be rejected. There is no way to bypass this check.
+        </p>
+      </Card>
     </div>
   );
 }
-

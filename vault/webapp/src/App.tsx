@@ -14,6 +14,7 @@ import { RedeemRequestList } from '@/features/vault/RedeemRequestList';
 import { CreateAccountRequestList } from '@/features/vault/CreateAccountRequestList';
 import { CreditAccountRequestList } from '@/features/vault/CreditAccountRequestList';
 import { LunarDollarBalance, LunarDollarTransfers } from '@/features/lunar-dollar';
+import { ComplianceDashboard, BlacklistManager } from '@/features/compliance';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -37,6 +38,8 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/lunar-dollar" element={<LunarDollarBalance />} />
           <Route path="/lunar-dollar/transfers" element={<LunarDollarTransfers />} />
+          <Route path="/compliance" element={<ComplianceDashboard />} />
+          <Route path="/compliance/blacklist/:id" element={<BlacklistManager />} />
           <Route path="/contracts" element={<ContractList />} />
 
           {/* Vault Routes */}

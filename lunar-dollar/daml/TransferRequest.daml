@@ -9,7 +9,7 @@ import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
 import Daml.Finance.Interface.Holding.V4.Transferable qualified as Transferable (Transfer(..), I)
 import Daml.Finance.Interface.Holding.V4.Fungible qualified as Fungible (I, Split(..))
 import Daml.Finance.Interface.Holding.V4.Util (getAmount, getInstrument)
-import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), InstrumentKey)
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), InstrumentKey(..))
 
 import Compliance.Registry (ComplianceRegistry, ValidateTransfer(..))
 
@@ -19,19 +19,21 @@ template TransferRequest
     instrument : InstrumentKey
     amount : Decimal
     currentOwner : Party
-    complianceRegistryCid : ContractId ComplianceRegistry
   where
     signatory receiverAccount.owner
-    observer currentOwner
+    observer currentOwner, instrument.issuer
 
     ensure amount > 0.0
 
     choice Accept : ContractId Holding.I
       with
         holdingCid : ContractId Holding.I
-      controller currentOwner
+      controller currentOwner, instrument.issuer
       do
-        results <- exercise complianceRegistryCid ValidateTransfer with
+        -- Look up registry by key (always gets the current version)
+        (registryCid, _) <- fetchByKey @ComplianceRegistry instrument.issuer
+        
+        results <- exercise registryCid ValidateTransfer with
           sender = currentOwner
           receiver = receiverAccount.owner
           amount

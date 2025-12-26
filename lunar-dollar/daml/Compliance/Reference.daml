@@ -1,0 +1,23 @@
+module Compliance.Reference where
+
+import Compliance.Registry (ComplianceRegistry)
+
+template ComplianceReference
+  with
+    operator : Party
+    publicParty : Party
+    complianceRegistryCid : ContractId ComplianceRegistry
+  where
+    signatory operator
+    observer publicParty
+
+    key operator : Party
+    maintainer key
+
+    choice UpdateReference : ContractId ComplianceReference
+      with
+        newRegistryCid : ContractId ComplianceRegistry
+      controller operator
+      do
+        create this with complianceRegistryCid = newRegistryCid
+

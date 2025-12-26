@@ -44,3 +44,11 @@ template ComplianceRegistry
         create this with
           activeValidators = filter (/= validatorCid) activeValidators
 
+    choice UpdateValidator : ContractId ComplianceRegistry
+      with
+        oldValidatorCid : ContractId TransferValidator
+        newValidatorCid : ContractId TransferValidator
+      controller operator
+      do
+        create this with
+          activeValidators = map (\cid -> if cid == oldValidatorCid then newValidatorCid else cid) activeValidators

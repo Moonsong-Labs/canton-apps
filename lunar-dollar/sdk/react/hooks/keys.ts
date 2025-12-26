@@ -384,6 +384,16 @@ export const queryKeys = {
     all: ['contracts', TemplateIds.Settlement_RouteProvider_SingleCustodian] as QueryKey,
     list: (filter?: unknown): QueryKey => ['contracts', TemplateIds.Settlement_RouteProvider_SingleCustodian, filter],
   },
+  /** Query keys for Compliance_Registry_ComplianceRegistry */
+  complianceRegistry: {
+    all: ['contracts', TemplateIds.Compliance_Registry_ComplianceRegistry] as QueryKey,
+    list: (filter?: unknown): QueryKey => ['contracts', TemplateIds.Compliance_Registry_ComplianceRegistry, filter],
+  },
+  /** Query keys for Compliance_Validators_Blacklist_BlacklistValidator */
+  blacklistValidator: {
+    all: ['contracts', TemplateIds.Compliance_Validators_Blacklist_BlacklistValidator] as QueryKey,
+    list: (filter?: unknown): QueryKey => ['contracts', TemplateIds.Compliance_Validators_Blacklist_BlacklistValidator, filter],
+  },
   /** Query keys for LunarDollar */
   lunarDollar: {
     all: ['contracts', TemplateIds.LunarDollar] as QueryKey,

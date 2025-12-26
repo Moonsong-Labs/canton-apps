@@ -612,6 +612,22 @@ export function useSingleCustodians(
   return useContractQuery<API.Settlement_RouteProvider_SingleCustodian.Payload>(TemplateIds.Settlement_RouteProvider_SingleCustodian, filter, options);
 }
 
+/** Query Compliance_Registry_ComplianceRegistry contracts with full type safety. */
+export function useComplianceRegistries(
+  filter?: Partial<API.Compliance_Registry_ComplianceRegistry.Payload>,
+  options?: { enabled?: boolean }
+): UseQueryResult<Contract<API.Compliance_Registry_ComplianceRegistry.Payload>[]> {
+  return useContractQuery<API.Compliance_Registry_ComplianceRegistry.Payload>(TemplateIds.Compliance_Registry_ComplianceRegistry, filter, options);
+}
+
+/** Query Compliance_Validators_Blacklist_BlacklistValidator contracts with full type safety. */
+export function useBlacklistValidators(
+  filter?: Partial<API.Compliance_Validators_Blacklist_BlacklistValidator.Payload>,
+  options?: { enabled?: boolean }
+): UseQueryResult<Contract<API.Compliance_Validators_Blacklist_BlacklistValidator.Payload>[]> {
+  return useContractQuery<API.Compliance_Validators_Blacklist_BlacklistValidator.Payload>(TemplateIds.Compliance_Validators_Blacklist_BlacklistValidator, filter, options);
+}
+
 /** Query LunarDollar contracts with full type safety. */
 export function useLunarDollars(
   filter?: Partial<API.LunarDollar.Payload>,

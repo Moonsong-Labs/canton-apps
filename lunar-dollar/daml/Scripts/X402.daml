@@ -7,15 +7,14 @@ import DA.Map (Map)
 import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), Id(..))
 import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
 
-import PaymentReceiver (PaymentReceiver(..), AccessGrant(..), Pay(..))
+import PaymentReceiver (PaymentReceiver(..), AccessGrant(..), RequestPayment(..), GrantAccess(..))
+import TransferRequest (Accept(..))
 import Scripts.Util (lookupParty, getLNRD)
-import Compliance.Registry (ComplianceRegistry)
 
 data SetupReceiverArgs = SetupReceiverArgs with
   receiver : Text
   prices : Map Text Decimal
   publicParty : Party
-  complianceRegistryCid : ContractId ComplianceRegistry
 
 setupReceiver : SetupReceiverArgs -> Script (ContractId PaymentReceiver)
 setupReceiver args = do
@@ -36,7 +35,6 @@ setupReceiver args = do
       instrumentKey = lnrd.instrumentKey
       prices = args.prices
       publicParty = args.publicParty
-      complianceRegistryCid = args.complianceRegistryCid
 
   debug $ "Created PaymentReceiver for " <> args.receiver
   pure receiverCid
@@ -54,14 +52,23 @@ pay : PayArgs -> Script (ContractId AccessGrant)
 pay args = do
   payer <- lookupParty args.payer
   receiver <- lookupParty args.receiver
+  bank <- lookupParty "Bank"
 
-  accessGrantCid <- submitMulti [payer] [receiver] do
-    exerciseCmd args.receiverCid Pay with
+  (transferReqCid, _price) <- submitMulti [payer] [receiver] do
+    exerciseCmd args.receiverCid RequestPayment with
+      payer
+      resource = args.resource
+      maxPrice = args.maxPrice
+
+  _ <- submitMulti [payer, bank] [] do
+    exerciseCmd transferReqCid Accept with
+      holdingCid = args.holdingCid
+
+  accessGrantCid <- submitMulti [payer, receiver] [] do
+    exerciseCmd args.receiverCid GrantAccess with
       payer
       sessionId = args.sessionId
       resource = args.resource
-      maxPrice = args.maxPrice
-      holdingCid = args.holdingCid
 
   debug $ "Payment successful! AccessGrant created for session " <> args.sessionId
   pure accessGrantCid
@@ -109,6 +116,7 @@ data DoPaymentArgs = DoPaymentArgs with
 doPayment : DoPaymentArgs -> Script (ContractId AccessGrant)
 doPayment args = do
   payer <- lookupParty args.payer
+  bank <- lookupParty "Bank"
   
   holdings <- queryInterface @Holding.I payer
   case holdings of
@@ -116,13 +124,20 @@ doPayment args = do
     ((holdingCid, _) :: _) -> do
       Some receiver <- queryContractId payer args.receiverCid
       
-      accessGrantCid <- submitMulti [payer] [receiver.receiver] do
-        exerciseCmd args.receiverCid Pay with
+      (transferReqCid, _price) <- submitMulti [payer] [receiver.receiver] do
+        exerciseCmd args.receiverCid RequestPayment with
+          payer
+          resource = args.resource
+          maxPrice = args.maxPrice
+      
+      _ <- submitMulti [payer, bank] [] do
+        exerciseCmd transferReqCid Accept with holdingCid
+      
+      accessGrantCid <- submitMulti [payer, receiver.receiver] [] do
+        exerciseCmd args.receiverCid GrantAccess with
           payer
           sessionId = args.sessionId
           resource = args.resource
-          maxPrice = args.maxPrice
-          holdingCid
       
       debug $ "Payment successful!"
       debug $ "  Session: " <> args.sessionId

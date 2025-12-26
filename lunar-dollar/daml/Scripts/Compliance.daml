@@ -1,49 +1,9 @@
 module Scripts.Compliance where
 
 import Daml.Script
-import DA.Set qualified as Set
 
 import Scripts.Util (lookupParty)
-import Compliance.Registry (ComplianceRegistry(..), AddValidator(..))
-import Compliance.Validator (TransferValidator)
-import Compliance.Validators.Blacklist (BlacklistValidator(..), AddToBlacklist(..))
-
-setupComplianceRegistry : Script (ContractId ComplianceRegistry)
-setupComplianceRegistry = do
-  bank <- lookupParty "Bank"
-  
-  registryCid <- submit bank do
-    createCmd ComplianceRegistry with
-      operator = bank
-      activeValidators = []
-  
-  debug $ "Created compliance registry: " <> show registryCid
-  pure registryCid
-
-setupBlacklistValidator : Script (ContractId BlacklistValidator)
-setupBlacklistValidator = do
-  bank <- lookupParty "Bank"
-  
-  validatorCid <- submit bank do
-    createCmd BlacklistValidator with
-      operator = bank
-      blacklistedParties = Set.empty
-  
-  debug $ "Created blacklist validator: " <> show validatorCid
-  pure validatorCid
-
-addValidatorToRegistry : ContractId ComplianceRegistry -> ContractId BlacklistValidator -> Script (ContractId ComplianceRegistry)
-addValidatorToRegistry registryCid validatorCid = do
-  bank <- lookupParty "Bank"
-  
-  let interfaceCid = toInterfaceContractId @TransferValidator validatorCid
-  
-  newRegistryCid <- submit bank do
-    exerciseCmd registryCid AddValidator with
-      validatorCid = interfaceCid
-  
-  debug "Added blacklist validator to registry"
-  pure newRegistryCid
+import Compliance.Validators.Blacklist (BlacklistValidator(..), AddToBlacklist(..), RemoveFromBlacklist(..))
 
 data AddPartyToBlacklistArgs = AddPartyToBlacklistArgs with
   validatorCid : ContractId BlacklistValidator
@@ -60,3 +20,25 @@ addPartyToBlacklist args = do
   
   debug $ "Added " <> args.partyName <> " to blacklist"
   pure newValidatorCid
+
+data RemovePartyFromBlacklistArgs = RemovePartyFromBlacklistArgs with
+  validatorCid : ContractId BlacklistValidator
+  partyName : Text
+
+removePartyFromBlacklist : RemovePartyFromBlacklistArgs -> Script (ContractId BlacklistValidator)
+removePartyFromBlacklist args = do
+  bank <- lookupParty "Bank"
+  partyToRemove <- lookupParty args.partyName
+  
+  newValidatorCid <- submit bank do
+    exerciseCmd args.validatorCid RemoveFromBlacklist with
+      party = partyToRemove
+  
+  debug $ "Removed " <> args.partyName <> " from blacklist"
+  pure newValidatorCid
+
+getBlacklistValidator : Script (ContractId BlacklistValidator, BlacklistValidator)
+getBlacklistValidator = do
+  bank <- lookupParty "Bank"
+  [(cid, validator)] <- query @BlacklistValidator bank
+  pure (cid, validator)

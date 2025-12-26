@@ -6,52 +6,63 @@
 // Import this file to interact with the Canton ledger.
 
 import {
-  Party,
-  ContractId,
-  Optional,
-  Numeric,
-  Time,
-  Command,
-  DamlMap,
-} from "./core/primitives";
+  Party, ContractId, Optional, Numeric, Time, Command, DamlMap
+} from './core/primitives';
 import {
-  AccountKey,
-  InstrumentKey,
-  HoldingFactoryKey,
-  Quantity,
-  Id,
-  Controllers,
-  Lock,
-  RoutedStep,
-  HoldingStandard,
-  Allocation,
-  Approval,
-} from "./core/interfaces";
+  AccountKey, InstrumentKey, HoldingFactoryKey, Quantity, Id, Controllers,
+  Lock, RoutedStep, HoldingStandard, Allocation, Approval
+} from './core/interfaces';
 
 // ═══════════════════════════════════════════════════════════════
-// DAML FINANCE TYPE STUBS
-// These are placeholder types from Daml Finance libraries.
-// Override with full definitions if precise typing is needed.
+// STUB TYPES (Daml Finance types not used by LunarDollar)
 // ═══════════════════════════════════════════════════════════════
 
 type HolidayCalendarData = unknown;
-type PeriodicSchedule = unknown;
 type FloatingRate = unknown;
-type DayCountConventionEnum = unknown;
-type Int = number;
+type PeriodicSchedule = unknown;
+type Int = string;
+type DayCountConventionEnum = string;
 type EventData = unknown;
-type Claim = unknown;
-type OptionTypeEnum = unknown;
-type BarrierTypeEnum = unknown;
+type Claim<T1 = unknown, T2 = unknown, T3 = unknown, T4 = unknown> = { t1: T1; t2: T2; t3: T3; t4: T4 } | unknown;
+type OptionTypeEnum = string;
+type BarrierTypeEnum = string;
 type Underlying = unknown;
 type SwapStream = unknown;
 
-declare namespace Daml_Finance_Data_V4_Time_DateClock_Types {
-  type Unit = unknown;
+// eslint-disable-next-line @typescript-eslint/no-namespace
+namespace Daml_Finance_Data_V4_Time_DateClock_Types {
+  export type Unit = Record<string, never>;
 }
 
-declare namespace Daml_Finance_Settlement_V4_Hierarchy {
-  type Hierarchy = unknown;
+// eslint-disable-next-line @typescript-eslint/no-namespace
+namespace Daml_Finance_Settlement_V4_Hierarchy {
+  export type Hierarchy = unknown;
+}
+
+/**
+ * Compliance_Validator
+ * Interface types for transfer validators
+ */
+export namespace Compliance_Validator {
+  export interface TransferValidator {
+    operator: Party;
+    validatorName: string;
+  }
+
+  export interface ValidationResult {
+    approved: boolean;
+    reason: Optional<string>;
+    validatorName: string;
+    checkedAt: Time;
+  }
+}
+
+/**
+ * Compliance_Registry
+ * Alias namespace for ComplianceRegistry types
+ */
+export namespace Compliance_Registry {
+  export type ComplianceRegistry = Compliance_Registry_ComplianceRegistry.Payload;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -59,161 +70,90 @@ declare namespace Daml_Finance_Settlement_V4_Hierarchy {
 // ═══════════════════════════════════════════════════════════════
 
 export const TemplateIds = {
-  Account_Account_Factory:
-    "daml-finance-account-v4:Daml.Finance.Account.V4.Account:Factory",
-  Account: "daml-finance-account-v4:Daml.Finance.Account.V4.Account:Account",
-  Claims_Lifecycle_Rule:
-    "daml-finance-claims-v3:Daml.Finance.Claims.V3.Lifecycle.Rule:Rule",
-  Data_Numeric_Observation_Factory:
-    "daml-finance-data-v4:Daml.Finance.Data.V4.Numeric.Observation:Factory",
-  Data_Numeric_Observation:
-    "daml-finance-data-v4:Daml.Finance.Data.V4.Numeric.Observation:Observation",
-  Data_Reference_HolidayCalendar_Factory:
-    "daml-finance-data-v4:Daml.Finance.Data.V4.Reference.HolidayCalendar:Factory",
-  Data_Reference_HolidayCalendar:
-    "daml-finance-data-v4:Daml.Finance.Data.V4.Reference.HolidayCalendar:HolidayCalendar",
-  Data_Time_DateClock:
-    "daml-finance-data-v4:Daml.Finance.Data.V4.Time.DateClock:DateClock",
-  Data_Time_DateClockUpdate_DateClockUpdateEvent:
-    "daml-finance-data-v4:Daml.Finance.Data.V4.Time.DateClockUpdate:DateClockUpdateEvent",
-  Data_Time_LedgerTime:
-    "daml-finance-data-v4:Daml.Finance.Data.V4.Time.LedgerTime:LedgerTime",
-  Holding_BaseHolding:
-    "daml-finance-holding-v4:Daml.Finance.Holding.V4.BaseHolding:BaseHolding",
-  Holding_Factory:
-    "daml-finance-holding-v4:Daml.Finance.Holding.V4.Factory:Factory",
-  Holding_Fungible:
-    "daml-finance-holding-v4:Daml.Finance.Holding.V4.Fungible:Fungible",
-  Holding_Transferable:
-    "daml-finance-holding-v4:Daml.Finance.Holding.V4.Transferable:Transferable",
-  Holding_TransferableFungible:
-    "daml-finance-holding-v4:Daml.Finance.Holding.V4.TransferableFungible:TransferableFungible",
-  Bond_Callable_Factory:
-    "daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.Callable.Factory:Factory",
-  Bond_Callable_Instrument:
-    "daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.Callable.Instrument:Instrument",
-  Bond_FixedRate_Factory:
-    "daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.FixedRate.Factory:Factory",
-  Bond_FixedRate_Instrument:
-    "daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.FixedRate.Instrument:Instrument",
-  Bond_FloatingRate_Factory:
-    "daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.FloatingRate.Factory:Factory",
-  Bond_FloatingRate_Instrument:
-    "daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.FloatingRate.Instrument:Instrument",
-  Bond_InflationLinked_Factory:
-    "daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.InflationLinked.Factory:Factory",
-  Bond_InflationLinked_Instrument:
-    "daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.InflationLinked.Instrument:Instrument",
-  Bond_ZeroCoupon_Factory:
-    "daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.ZeroCoupon.Factory:Factory",
-  Bond_ZeroCoupon_Instrument:
-    "daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.ZeroCoupon.Instrument:Instrument",
-  Equity_Factory:
-    "daml-finance-instrument-equity-v0:Daml.Finance.Instrument.Equity.V0.Factory:Factory",
-  Equity_Instrument:
-    "daml-finance-instrument-equity-v0:Daml.Finance.Instrument.Equity.V0.Instrument:Instrument",
-  Generic_Factory:
-    "daml-finance-instrument-generic-v4:Daml.Finance.Instrument.Generic.V4.Factory:Factory",
-  Generic_Instrument:
-    "daml-finance-instrument-generic-v4:Daml.Finance.Instrument.Generic.V4.Instrument:Instrument",
-  Generic_Lifecycle_Rule:
-    "daml-finance-instrument-generic-v4:Daml.Finance.Instrument.Generic.V4.Lifecycle.Rule:Rule",
-  Option_BarrierEuropeanCash_Factory:
-    "daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.BarrierEuropeanCash.Factory:Factory",
-  Option_BarrierEuropeanCash_Instrument:
-    "daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.BarrierEuropeanCash.Instrument:Instrument",
-  Option_Dividend_Election_Factory:
-    "daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.Dividend.Election:Factory",
-  Option_Dividend_Factory:
-    "daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.Dividend.Factory:Factory",
-  Option_Dividend_Instrument:
-    "daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.Dividend.Instrument:Instrument",
-  Option_EuropeanCash_Factory:
-    "daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.EuropeanCash.Factory:Factory",
-  Option_EuropeanCash_Instrument:
-    "daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.EuropeanCash.Instrument:Instrument",
-  Option_EuropeanPhysical_Factory:
-    "daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.EuropeanPhysical.Factory:Factory",
-  Option_EuropeanPhysical_Instrument:
-    "daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.EuropeanPhysical.Instrument:Instrument",
-  StructuredProduct_AutoCallable_Factory:
-    "daml-finance-instrument-structuredproduct-v0:Daml.Finance.Instrument.StructuredProduct.V0.AutoCallable.Factory:Factory",
-  StructuredProduct_AutoCallable_Instrument:
-    "daml-finance-instrument-structuredproduct-v0:Daml.Finance.Instrument.StructuredProduct.V0.AutoCallable.Instrument:Instrument",
-  StructuredProduct_BarrierReverseConvertible_Factory:
-    "daml-finance-instrument-structuredproduct-v0:Daml.Finance.Instrument.StructuredProduct.V0.BarrierReverseConvertible.Factory:Factory",
-  StructuredProduct_BarrierReverseConvertible_Instrument:
-    "daml-finance-instrument-structuredproduct-v0:Daml.Finance.Instrument.StructuredProduct.V0.BarrierReverseConvertible.Instrument:Instrument",
-  Swap_Asset_DistributionRule:
-    "daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.Asset.DistributionRule:DistributionRule",
-  Swap_Asset_Factory:
-    "daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.Asset.Factory:Factory",
-  Swap_Asset_Instrument:
-    "daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.Asset.Instrument:Instrument",
-  Swap_CreditDefault_Factory:
-    "daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.CreditDefault.Factory:Factory",
-  Swap_CreditDefault_Instrument:
-    "daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.CreditDefault.Instrument:Instrument",
-  Swap_Currency_Factory:
-    "daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.Currency.Factory:Factory",
-  Swap_Currency_Instrument:
-    "daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.Currency.Instrument:Instrument",
-  Swap_ForeignExchange_Factory:
-    "daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.ForeignExchange.Factory:Factory",
-  Swap_ForeignExchange_Instrument:
-    "daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.ForeignExchange.Instrument:Instrument",
-  Swap_Fpml_Factory:
-    "daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.Fpml.Factory:Factory",
-  Swap_Fpml_Instrument:
-    "daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.Fpml.Instrument:Instrument",
-  Swap_InterestRate_Factory:
-    "daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.InterestRate.Factory:Factory",
-  Swap_InterestRate_Instrument:
-    "daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.InterestRate.Instrument:Instrument",
-  Token_Factory:
-    "daml-finance-instrument-token-v4:Daml.Finance.Instrument.Token.V4.Factory:Factory",
-  Token_Instrument:
-    "daml-finance-instrument-token-v4:Daml.Finance.Instrument.Token.V4.Instrument:Instrument",
-  Account_Account_Reference:
-    "daml-finance-interface-account-v4:Daml.Finance.Interface.Account.V4.Account:Reference",
-  Holding_Factory_Reference:
-    "daml-finance-interface-holding-v4:Daml.Finance.Interface.Holding.V4.Factory:Reference",
-  Base_Instrument_Reference:
-    "daml-finance-interface-instrument-base-v4:Daml.Finance.Interface.Instrument.Base.V4.Instrument:Reference",
-  Lifecycle_Effect:
-    "daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Effect:Effect",
-  Lifecycle_Election_Factory:
-    "daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Election:Factory",
-  Lifecycle_Election:
-    "daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Election:Election",
-  Lifecycle_ElectionEffect:
-    "daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.ElectionEffect:ElectionEffect",
-  Lifecycle_Distribution_Event:
-    "daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Event.Distribution:Event",
-  Lifecycle_Replacement_Event:
-    "daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Event.Replacement:Event",
-  Lifecycle_Claim_Rule:
-    "daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Rule.Claim:Rule",
-  Lifecycle_Distribution_Rule:
-    "daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Rule.Distribution:Rule",
-  Lifecycle_Replacement_Rule:
-    "daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Rule.Replacement:Rule",
-  Settlement_Batch:
-    "daml-finance-settlement-v4:Daml.Finance.Settlement.V4.Batch:Batch",
-  Settlement_Factory:
-    "daml-finance-settlement-v4:Daml.Finance.Settlement.V4.Factory:Factory",
-  Settlement_Instruction:
-    "daml-finance-settlement-v4:Daml.Finance.Settlement.V4.Instruction:Instruction",
-  Settlement_RouteProvider_IntermediatedStatic:
-    "daml-finance-settlement-v4:Daml.Finance.Settlement.V4.RouteProvider.IntermediatedStatic:IntermediatedStatic",
-  Settlement_RouteProvider_SingleCustodian:
-    "daml-finance-settlement-v4:Daml.Finance.Settlement.V4.RouteProvider.SingleCustodian:SingleCustodian",
-  LunarDollar: "lunar-dollar:LunarDollar:LunarDollar",
-  PaymentReceiver: "lunar-dollar:PaymentReceiver:PaymentReceiver",
-  PaymentReceiver_AccessGrant: "lunar-dollar:PaymentReceiver:AccessGrant",
-  TransferRequest: "lunar-dollar:TransferRequest:TransferRequest",
-  Workflow_CreateAccount_Request: "lunar-dollar:Workflow.CreateAccount:Request",
-  Workflow_CreditAccount_Request: "lunar-dollar:Workflow.CreditAccount:Request",
+  Account_Account_Factory: 'daml-finance-account-v4:Daml.Finance.Account.V4.Account:Factory',
+  Account: 'daml-finance-account-v4:Daml.Finance.Account.V4.Account:Account',
+  Claims_Lifecycle_Rule: 'daml-finance-claims-v3:Daml.Finance.Claims.V3.Lifecycle.Rule:Rule',
+  Data_Numeric_Observation_Factory: 'daml-finance-data-v4:Daml.Finance.Data.V4.Numeric.Observation:Factory',
+  Data_Numeric_Observation: 'daml-finance-data-v4:Daml.Finance.Data.V4.Numeric.Observation:Observation',
+  Data_Reference_HolidayCalendar_Factory: 'daml-finance-data-v4:Daml.Finance.Data.V4.Reference.HolidayCalendar:Factory',
+  Data_Reference_HolidayCalendar: 'daml-finance-data-v4:Daml.Finance.Data.V4.Reference.HolidayCalendar:HolidayCalendar',
+  Data_Time_DateClock: 'daml-finance-data-v4:Daml.Finance.Data.V4.Time.DateClock:DateClock',
+  Data_Time_DateClockUpdate_DateClockUpdateEvent: 'daml-finance-data-v4:Daml.Finance.Data.V4.Time.DateClockUpdate:DateClockUpdateEvent',
+  Data_Time_LedgerTime: 'daml-finance-data-v4:Daml.Finance.Data.V4.Time.LedgerTime:LedgerTime',
+  Holding_BaseHolding: 'daml-finance-holding-v4:Daml.Finance.Holding.V4.BaseHolding:BaseHolding',
+  Holding_Factory: 'daml-finance-holding-v4:Daml.Finance.Holding.V4.Factory:Factory',
+  Holding_Fungible: 'daml-finance-holding-v4:Daml.Finance.Holding.V4.Fungible:Fungible',
+  Holding_Transferable: 'daml-finance-holding-v4:Daml.Finance.Holding.V4.Transferable:Transferable',
+  Holding_TransferableFungible: 'daml-finance-holding-v4:Daml.Finance.Holding.V4.TransferableFungible:TransferableFungible',
+  Bond_Callable_Factory: 'daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.Callable.Factory:Factory',
+  Bond_Callable_Instrument: 'daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.Callable.Instrument:Instrument',
+  Bond_FixedRate_Factory: 'daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.FixedRate.Factory:Factory',
+  Bond_FixedRate_Instrument: 'daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.FixedRate.Instrument:Instrument',
+  Bond_FloatingRate_Factory: 'daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.FloatingRate.Factory:Factory',
+  Bond_FloatingRate_Instrument: 'daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.FloatingRate.Instrument:Instrument',
+  Bond_InflationLinked_Factory: 'daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.InflationLinked.Factory:Factory',
+  Bond_InflationLinked_Instrument: 'daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.InflationLinked.Instrument:Instrument',
+  Bond_ZeroCoupon_Factory: 'daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.ZeroCoupon.Factory:Factory',
+  Bond_ZeroCoupon_Instrument: 'daml-finance-instrument-bond-v3:Daml.Finance.Instrument.Bond.V3.ZeroCoupon.Instrument:Instrument',
+  Equity_Factory: 'daml-finance-instrument-equity-v0:Daml.Finance.Instrument.Equity.V0.Factory:Factory',
+  Equity_Instrument: 'daml-finance-instrument-equity-v0:Daml.Finance.Instrument.Equity.V0.Instrument:Instrument',
+  Generic_Factory: 'daml-finance-instrument-generic-v4:Daml.Finance.Instrument.Generic.V4.Factory:Factory',
+  Generic_Instrument: 'daml-finance-instrument-generic-v4:Daml.Finance.Instrument.Generic.V4.Instrument:Instrument',
+  Generic_Lifecycle_Rule: 'daml-finance-instrument-generic-v4:Daml.Finance.Instrument.Generic.V4.Lifecycle.Rule:Rule',
+  Option_BarrierEuropeanCash_Factory: 'daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.BarrierEuropeanCash.Factory:Factory',
+  Option_BarrierEuropeanCash_Instrument: 'daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.BarrierEuropeanCash.Instrument:Instrument',
+  Option_Dividend_Election_Factory: 'daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.Dividend.Election:Factory',
+  Option_Dividend_Factory: 'daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.Dividend.Factory:Factory',
+  Option_Dividend_Instrument: 'daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.Dividend.Instrument:Instrument',
+  Option_EuropeanCash_Factory: 'daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.EuropeanCash.Factory:Factory',
+  Option_EuropeanCash_Instrument: 'daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.EuropeanCash.Instrument:Instrument',
+  Option_EuropeanPhysical_Factory: 'daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.EuropeanPhysical.Factory:Factory',
+  Option_EuropeanPhysical_Instrument: 'daml-finance-instrument-option-v0:Daml.Finance.Instrument.Option.V0.EuropeanPhysical.Instrument:Instrument',
+  StructuredProduct_AutoCallable_Factory: 'daml-finance-instrument-structuredproduct-v0:Daml.Finance.Instrument.StructuredProduct.V0.AutoCallable.Factory:Factory',
+  StructuredProduct_AutoCallable_Instrument: 'daml-finance-instrument-structuredproduct-v0:Daml.Finance.Instrument.StructuredProduct.V0.AutoCallable.Instrument:Instrument',
+  StructuredProduct_BarrierReverseConvertible_Factory: 'daml-finance-instrument-structuredproduct-v0:Daml.Finance.Instrument.StructuredProduct.V0.BarrierReverseConvertible.Factory:Factory',
+  StructuredProduct_BarrierReverseConvertible_Instrument: 'daml-finance-instrument-structuredproduct-v0:Daml.Finance.Instrument.StructuredProduct.V0.BarrierReverseConvertible.Instrument:Instrument',
+  Swap_Asset_DistributionRule: 'daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.Asset.DistributionRule:DistributionRule',
+  Swap_Asset_Factory: 'daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.Asset.Factory:Factory',
+  Swap_Asset_Instrument: 'daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.Asset.Instrument:Instrument',
+  Swap_CreditDefault_Factory: 'daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.CreditDefault.Factory:Factory',
+  Swap_CreditDefault_Instrument: 'daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.CreditDefault.Instrument:Instrument',
+  Swap_Currency_Factory: 'daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.Currency.Factory:Factory',
+  Swap_Currency_Instrument: 'daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.Currency.Instrument:Instrument',
+  Swap_ForeignExchange_Factory: 'daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.ForeignExchange.Factory:Factory',
+  Swap_ForeignExchange_Instrument: 'daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.ForeignExchange.Instrument:Instrument',
+  Swap_Fpml_Factory: 'daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.Fpml.Factory:Factory',
+  Swap_Fpml_Instrument: 'daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.Fpml.Instrument:Instrument',
+  Swap_InterestRate_Factory: 'daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.InterestRate.Factory:Factory',
+  Swap_InterestRate_Instrument: 'daml-finance-instrument-swap-v0:Daml.Finance.Instrument.Swap.V0.InterestRate.Instrument:Instrument',
+  Token_Factory: 'daml-finance-instrument-token-v4:Daml.Finance.Instrument.Token.V4.Factory:Factory',
+  Token_Instrument: 'daml-finance-instrument-token-v4:Daml.Finance.Instrument.Token.V4.Instrument:Instrument',
+  Account_Account_Reference: 'daml-finance-interface-account-v4:Daml.Finance.Interface.Account.V4.Account:Reference',
+  Holding_Factory_Reference: 'daml-finance-interface-holding-v4:Daml.Finance.Interface.Holding.V4.Factory:Reference',
+  Base_Instrument_Reference: 'daml-finance-interface-instrument-base-v4:Daml.Finance.Interface.Instrument.Base.V4.Instrument:Reference',
+  Lifecycle_Effect: 'daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Effect:Effect',
+  Lifecycle_Election_Factory: 'daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Election:Factory',
+  Lifecycle_Election: 'daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Election:Election',
+  Lifecycle_ElectionEffect: 'daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.ElectionEffect:ElectionEffect',
+  Lifecycle_Distribution_Event: 'daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Event.Distribution:Event',
+  Lifecycle_Replacement_Event: 'daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Event.Replacement:Event',
+  Lifecycle_Claim_Rule: 'daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Rule.Claim:Rule',
+  Lifecycle_Distribution_Rule: 'daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Rule.Distribution:Rule',
+  Lifecycle_Replacement_Rule: 'daml-finance-lifecycle-v4:Daml.Finance.Lifecycle.V4.Rule.Replacement:Rule',
+  Settlement_Batch: 'daml-finance-settlement-v4:Daml.Finance.Settlement.V4.Batch:Batch',
+  Settlement_Factory: 'daml-finance-settlement-v4:Daml.Finance.Settlement.V4.Factory:Factory',
+  Settlement_Instruction: 'daml-finance-settlement-v4:Daml.Finance.Settlement.V4.Instruction:Instruction',
+  Settlement_RouteProvider_IntermediatedStatic: 'daml-finance-settlement-v4:Daml.Finance.Settlement.V4.RouteProvider.IntermediatedStatic:IntermediatedStatic',
+  Settlement_RouteProvider_SingleCustodian: 'daml-finance-settlement-v4:Daml.Finance.Settlement.V4.RouteProvider.SingleCustodian:SingleCustodian',
+  Compliance_Reference_ComplianceReference: 'lunar-dollar:Compliance.Reference:ComplianceReference',
+  Compliance_Registry_ComplianceRegistry: 'lunar-dollar:Compliance.Registry:ComplianceRegistry',
+  Compliance_Validators_Blacklist_BlacklistValidator: 'lunar-dollar:Compliance.Validators.Blacklist:BlacklistValidator',
+  LunarDollar: 'lunar-dollar:LunarDollar:LunarDollar',
+  PaymentReceiver: 'lunar-dollar:PaymentReceiver:PaymentReceiver',
+  PaymentReceiver_AccessGrant: 'lunar-dollar:PaymentReceiver:AccessGrant',
+  TransferRequest: 'lunar-dollar:TransferRequest:TransferRequest',
+  Workflow_CreateAccount_Request: 'lunar-dollar:Workflow.CreateAccount:Request',
+  Workflow_CreditAccount_Request: 'lunar-dollar:Workflow.CreditAccount:Request',
 } as const;
 
 // ═══════════════════════════════════════════════════════════════
@@ -236,6 +176,7 @@ export const TemplateIds = {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Account_Account_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -246,7 +187,7 @@ export namespace Account_Account_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Account_Account_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -262,6 +203,7 @@ export namespace Account_Account_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Account {
+
   /** Template payload fields */
   export interface Payload {
     custodian: Party;
@@ -278,7 +220,7 @@ export namespace Account {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Account,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -294,6 +236,7 @@ export namespace Account {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Claims_Lifecycle_Rule {
+
   /** Template payload fields */
   export interface Payload {
     providers: Party[];
@@ -307,7 +250,7 @@ export namespace Claims_Lifecycle_Rule {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Claims_Lifecycle_Rule,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -323,6 +266,7 @@ export namespace Claims_Lifecycle_Rule {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Data_Numeric_Observation_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -333,7 +277,7 @@ export namespace Data_Numeric_Observation_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Data_Numeric_Observation_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -349,6 +293,7 @@ export namespace Data_Numeric_Observation_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Data_Numeric_Observation {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -361,7 +306,7 @@ export namespace Data_Numeric_Observation {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Data_Numeric_Observation,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -377,6 +322,7 @@ export namespace Data_Numeric_Observation {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Data_Reference_HolidayCalendar_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -387,7 +333,7 @@ export namespace Data_Reference_HolidayCalendar_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Data_Reference_HolidayCalendar_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -403,6 +349,7 @@ export namespace Data_Reference_HolidayCalendar_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Data_Reference_HolidayCalendar {
+
   /** Template payload fields */
   export interface Payload {
     calendar: HolidayCalendarData;
@@ -414,7 +361,7 @@ export namespace Data_Reference_HolidayCalendar {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Data_Reference_HolidayCalendar,
-      argument: payload,
+      argument: payload
     };
   }
 
@@ -427,9 +374,9 @@ export namespace Data_Reference_HolidayCalendar {
   ): Command<HolidayCalendarData> {
     return {
       templateId: TemplateIds.Data_Reference_HolidayCalendar,
-      choice: "GetCalendar",
+      choice: 'GetCalendar',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 }
@@ -445,6 +392,7 @@ export namespace Data_Reference_HolidayCalendar {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Data_Time_DateClock {
+
   /** Template payload fields */
   export interface Payload {
     providers: Party[];
@@ -458,7 +406,7 @@ export namespace Data_Time_DateClock {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Data_Time_DateClock,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -474,6 +422,7 @@ export namespace Data_Time_DateClock {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Data_Time_DateClockUpdate_DateClockUpdateEvent {
+
   /** Template payload fields */
   export interface Payload {
     providers: Party[];
@@ -488,7 +437,7 @@ export namespace Data_Time_DateClockUpdate_DateClockUpdateEvent {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Data_Time_DateClockUpdate_DateClockUpdateEvent,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -504,6 +453,7 @@ export namespace Data_Time_DateClockUpdate_DateClockUpdateEvent {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Data_Time_LedgerTime {
+
   /** Template payload fields */
   export interface Payload {
     providers: Party[];
@@ -516,7 +466,7 @@ export namespace Data_Time_LedgerTime {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Data_Time_LedgerTime,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -532,6 +482,7 @@ export namespace Data_Time_LedgerTime {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Holding_BaseHolding {
+
   /** Template payload fields */
   export interface Payload {
     instrument: InstrumentKey;
@@ -545,7 +496,7 @@ export namespace Holding_BaseHolding {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Holding_BaseHolding,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -561,6 +512,7 @@ export namespace Holding_BaseHolding {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Holding_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -572,7 +524,7 @@ export namespace Holding_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Holding_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -588,6 +540,7 @@ export namespace Holding_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Holding_Fungible {
+
   /** Template payload fields */
   export interface Payload {
     instrument: InstrumentKey;
@@ -601,7 +554,7 @@ export namespace Holding_Fungible {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Holding_Fungible,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -617,6 +570,7 @@ export namespace Holding_Fungible {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Holding_Transferable {
+
   /** Template payload fields */
   export interface Payload {
     instrument: InstrumentKey;
@@ -630,7 +584,7 @@ export namespace Holding_Transferable {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Holding_Transferable,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -646,6 +600,7 @@ export namespace Holding_Transferable {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Holding_TransferableFungible {
+
   /** Template payload fields */
   export interface Payload {
     instrument: InstrumentKey;
@@ -659,7 +614,7 @@ export namespace Holding_TransferableFungible {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Holding_TransferableFungible,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -675,6 +630,7 @@ export namespace Holding_TransferableFungible {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Bond_Callable_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -685,7 +641,7 @@ export namespace Bond_Callable_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Bond_Callable_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -701,6 +657,7 @@ export namespace Bond_Callable_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Bond_Callable_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -731,7 +688,7 @@ export namespace Bond_Callable_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Bond_Callable_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -747,6 +704,7 @@ export namespace Bond_Callable_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Bond_FixedRate_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -757,7 +715,7 @@ export namespace Bond_FixedRate_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Bond_FixedRate_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -773,6 +731,7 @@ export namespace Bond_FixedRate_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Bond_FixedRate_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -796,7 +755,7 @@ export namespace Bond_FixedRate_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Bond_FixedRate_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -812,6 +771,7 @@ export namespace Bond_FixedRate_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Bond_FloatingRate_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -822,7 +782,7 @@ export namespace Bond_FloatingRate_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Bond_FloatingRate_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -838,6 +798,7 @@ export namespace Bond_FloatingRate_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Bond_FloatingRate_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -862,7 +823,7 @@ export namespace Bond_FloatingRate_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Bond_FloatingRate_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -878,6 +839,7 @@ export namespace Bond_FloatingRate_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Bond_InflationLinked_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -888,7 +850,7 @@ export namespace Bond_InflationLinked_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Bond_InflationLinked_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -904,6 +866,7 @@ export namespace Bond_InflationLinked_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Bond_InflationLinked_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -929,7 +892,7 @@ export namespace Bond_InflationLinked_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Bond_InflationLinked_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -945,6 +908,7 @@ export namespace Bond_InflationLinked_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Bond_ZeroCoupon_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -955,7 +919,7 @@ export namespace Bond_ZeroCoupon_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Bond_ZeroCoupon_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -971,6 +935,7 @@ export namespace Bond_ZeroCoupon_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Bond_ZeroCoupon_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -991,7 +956,7 @@ export namespace Bond_ZeroCoupon_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Bond_ZeroCoupon_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1007,6 +972,7 @@ export namespace Bond_ZeroCoupon_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Equity_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1017,7 +983,7 @@ export namespace Equity_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Equity_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1033,6 +999,7 @@ export namespace Equity_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Equity_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     issuer: Party;
@@ -1049,7 +1016,7 @@ export namespace Equity_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Equity_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1065,6 +1032,7 @@ export namespace Equity_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Generic_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1075,7 +1043,7 @@ export namespace Generic_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Generic_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1091,6 +1059,7 @@ export namespace Generic_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Generic_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -1099,7 +1068,7 @@ export namespace Generic_Instrument {
     version: string;
     holdingStandard: HoldingStandard;
     description: string;
-    claims: Claim;
+    claims: Claim<Time, Numeric, InstrumentKey, string>;
     acquisitionTime: Time;
     observers: DamlMap<string, Party[]>;
     lastEventTimestamp: Time;
@@ -1109,7 +1078,7 @@ export namespace Generic_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Generic_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1125,6 +1094,7 @@ export namespace Generic_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Generic_Lifecycle_Rule {
+
   /** Template payload fields */
   export interface Payload {
     providers: Party[];
@@ -1138,7 +1108,7 @@ export namespace Generic_Lifecycle_Rule {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Generic_Lifecycle_Rule,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1154,6 +1124,7 @@ export namespace Generic_Lifecycle_Rule {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Option_BarrierEuropeanCash_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1164,7 +1135,7 @@ export namespace Option_BarrierEuropeanCash_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Option_BarrierEuropeanCash_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1180,6 +1151,7 @@ export namespace Option_BarrierEuropeanCash_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Option_BarrierEuropeanCash_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -1205,7 +1177,7 @@ export namespace Option_BarrierEuropeanCash_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Option_BarrierEuropeanCash_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1221,6 +1193,7 @@ export namespace Option_BarrierEuropeanCash_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Option_Dividend_Election_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1231,7 +1204,7 @@ export namespace Option_Dividend_Election_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Option_Dividend_Election_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1247,6 +1220,7 @@ export namespace Option_Dividend_Election_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Option_Dividend_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1257,7 +1231,7 @@ export namespace Option_Dividend_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Option_Dividend_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1273,6 +1247,7 @@ export namespace Option_Dividend_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Option_Dividend_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -1294,7 +1269,7 @@ export namespace Option_Dividend_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Option_Dividend_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1310,6 +1285,7 @@ export namespace Option_Dividend_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Option_EuropeanCash_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1320,7 +1296,7 @@ export namespace Option_EuropeanCash_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Option_EuropeanCash_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1336,6 +1312,7 @@ export namespace Option_EuropeanCash_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Option_EuropeanCash_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -1358,7 +1335,7 @@ export namespace Option_EuropeanCash_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Option_EuropeanCash_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1374,6 +1351,7 @@ export namespace Option_EuropeanCash_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Option_EuropeanPhysical_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1384,7 +1362,7 @@ export namespace Option_EuropeanPhysical_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Option_EuropeanPhysical_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1400,6 +1378,7 @@ export namespace Option_EuropeanPhysical_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Option_EuropeanPhysical_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -1423,7 +1402,7 @@ export namespace Option_EuropeanPhysical_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Option_EuropeanPhysical_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1439,6 +1418,7 @@ export namespace Option_EuropeanPhysical_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace StructuredProduct_AutoCallable_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1449,7 +1429,7 @@ export namespace StructuredProduct_AutoCallable_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.StructuredProduct_AutoCallable_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1465,6 +1445,7 @@ export namespace StructuredProduct_AutoCallable_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace StructuredProduct_AutoCallable_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -1495,7 +1476,7 @@ export namespace StructuredProduct_AutoCallable_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.StructuredProduct_AutoCallable_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1511,6 +1492,7 @@ export namespace StructuredProduct_AutoCallable_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace StructuredProduct_BarrierReverseConvertible_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1520,9 +1502,8 @@ export namespace StructuredProduct_BarrierReverseConvertible_Factory {
   /** Create a new Factory contract */
   export function create(payload: Payload): Command<Payload> {
     return {
-      templateId:
-        TemplateIds.StructuredProduct_BarrierReverseConvertible_Factory,
-      argument: payload,
+      templateId: TemplateIds.StructuredProduct_BarrierReverseConvertible_Factory,
+      argument: payload
     };
   }
 }
@@ -1538,6 +1519,7 @@ export namespace StructuredProduct_BarrierReverseConvertible_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace StructuredProduct_BarrierReverseConvertible_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -1566,9 +1548,8 @@ export namespace StructuredProduct_BarrierReverseConvertible_Instrument {
   /** Create a new Instrument contract */
   export function create(payload: Payload): Command<Payload> {
     return {
-      templateId:
-        TemplateIds.StructuredProduct_BarrierReverseConvertible_Instrument,
-      argument: payload,
+      templateId: TemplateIds.StructuredProduct_BarrierReverseConvertible_Instrument,
+      argument: payload
     };
   }
 }
@@ -1584,6 +1565,7 @@ export namespace StructuredProduct_BarrierReverseConvertible_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Swap_Asset_DistributionRule {
+
   /** Template payload fields */
   export interface Payload {
     providers: Party[];
@@ -1599,7 +1581,7 @@ export namespace Swap_Asset_DistributionRule {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Swap_Asset_DistributionRule,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1615,6 +1597,7 @@ export namespace Swap_Asset_DistributionRule {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Swap_Asset_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1625,7 +1608,7 @@ export namespace Swap_Asset_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Swap_Asset_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1641,6 +1624,7 @@ export namespace Swap_Asset_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Swap_Asset_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -1666,7 +1650,7 @@ export namespace Swap_Asset_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Swap_Asset_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1682,6 +1666,7 @@ export namespace Swap_Asset_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Swap_CreditDefault_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1692,7 +1677,7 @@ export namespace Swap_CreditDefault_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Swap_CreditDefault_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1708,6 +1693,7 @@ export namespace Swap_CreditDefault_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Swap_CreditDefault_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -1733,7 +1719,7 @@ export namespace Swap_CreditDefault_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Swap_CreditDefault_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1749,6 +1735,7 @@ export namespace Swap_CreditDefault_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Swap_Currency_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1759,7 +1746,7 @@ export namespace Swap_Currency_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Swap_Currency_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1775,6 +1762,7 @@ export namespace Swap_Currency_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Swap_Currency_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -1801,7 +1789,7 @@ export namespace Swap_Currency_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Swap_Currency_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1817,6 +1805,7 @@ export namespace Swap_Currency_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Swap_ForeignExchange_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1827,7 +1816,7 @@ export namespace Swap_ForeignExchange_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Swap_ForeignExchange_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1843,6 +1832,7 @@ export namespace Swap_ForeignExchange_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Swap_ForeignExchange_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -1866,7 +1856,7 @@ export namespace Swap_ForeignExchange_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Swap_ForeignExchange_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1882,6 +1872,7 @@ export namespace Swap_ForeignExchange_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Swap_Fpml_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1892,7 +1883,7 @@ export namespace Swap_Fpml_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Swap_Fpml_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1908,6 +1899,7 @@ export namespace Swap_Fpml_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Swap_Fpml_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -1928,7 +1920,7 @@ export namespace Swap_Fpml_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Swap_Fpml_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1944,6 +1936,7 @@ export namespace Swap_Fpml_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Swap_InterestRate_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -1954,7 +1947,7 @@ export namespace Swap_InterestRate_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Swap_InterestRate_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -1970,6 +1963,7 @@ export namespace Swap_InterestRate_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Swap_InterestRate_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -1994,7 +1988,7 @@ export namespace Swap_InterestRate_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Swap_InterestRate_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2010,6 +2004,7 @@ export namespace Swap_InterestRate_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Token_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -2020,7 +2015,7 @@ export namespace Token_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Token_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2036,6 +2031,7 @@ export namespace Token_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Token_Instrument {
+
   /** Template payload fields */
   export interface Payload {
     depository: Party;
@@ -2052,7 +2048,7 @@ export namespace Token_Instrument {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Token_Instrument,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2068,6 +2064,7 @@ export namespace Token_Instrument {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Account_Account_Reference {
+
   /** Template payload fields */
   export interface Payload {
     accountView: AccountView;
@@ -2079,7 +2076,7 @@ export namespace Account_Account_Reference {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Account_Account_Reference,
-      argument: payload,
+      argument: payload
     };
   }
 
@@ -2092,9 +2089,9 @@ export namespace Account_Account_Reference {
   ): Command<unknown> {
     return {
       templateId: TemplateIds.Account_Account_Reference,
-      choice: "SetCid",
+      choice: 'SetCid',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 
@@ -2107,9 +2104,9 @@ export namespace Account_Account_Reference {
   ): Command<unknown> {
     return {
       templateId: TemplateIds.Account_Account_Reference,
-      choice: "SetObservers",
+      choice: 'SetObservers',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 
@@ -2122,9 +2119,9 @@ export namespace Account_Account_Reference {
   ): Command<unknown> {
     return {
       templateId: TemplateIds.Account_Account_Reference,
-      choice: "GetCid",
+      choice: 'GetCid',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 }
@@ -2140,6 +2137,7 @@ export namespace Account_Account_Reference {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Holding_Factory_Reference {
+
   /** Template payload fields */
   export interface Payload {
     factoryView: AccountView;
@@ -2151,7 +2149,7 @@ export namespace Holding_Factory_Reference {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Holding_Factory_Reference,
-      argument: payload,
+      argument: payload
     };
   }
 
@@ -2164,9 +2162,9 @@ export namespace Holding_Factory_Reference {
   ): Command<unknown> {
     return {
       templateId: TemplateIds.Holding_Factory_Reference,
-      choice: "SetCid",
+      choice: 'SetCid',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 
@@ -2179,9 +2177,9 @@ export namespace Holding_Factory_Reference {
   ): Command<unknown> {
     return {
       templateId: TemplateIds.Holding_Factory_Reference,
-      choice: "SetObservers",
+      choice: 'SetObservers',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 
@@ -2194,9 +2192,9 @@ export namespace Holding_Factory_Reference {
   ): Command<unknown> {
     return {
       templateId: TemplateIds.Holding_Factory_Reference,
-      choice: "GetCid",
+      choice: 'GetCid',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 }
@@ -2212,6 +2210,7 @@ export namespace Holding_Factory_Reference {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Base_Instrument_Reference {
+
   /** Template payload fields */
   export interface Payload {
     instrumentView: AccountView;
@@ -2223,7 +2222,7 @@ export namespace Base_Instrument_Reference {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Base_Instrument_Reference,
-      argument: payload,
+      argument: payload
     };
   }
 
@@ -2236,9 +2235,9 @@ export namespace Base_Instrument_Reference {
   ): Command<unknown> {
     return {
       templateId: TemplateIds.Base_Instrument_Reference,
-      choice: "SetCid",
+      choice: 'SetCid',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 
@@ -2251,9 +2250,9 @@ export namespace Base_Instrument_Reference {
   ): Command<unknown> {
     return {
       templateId: TemplateIds.Base_Instrument_Reference,
-      choice: "SetObservers",
+      choice: 'SetObservers',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 
@@ -2266,9 +2265,9 @@ export namespace Base_Instrument_Reference {
   ): Command<unknown> {
     return {
       templateId: TemplateIds.Base_Instrument_Reference,
-      choice: "GetCid",
+      choice: 'GetCid',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 }
@@ -2284,6 +2283,7 @@ export namespace Base_Instrument_Reference {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Lifecycle_Effect {
+
   /** Template payload fields */
   export interface Payload {
     providers: Party[];
@@ -2301,7 +2301,7 @@ export namespace Lifecycle_Effect {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Effect,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2317,6 +2317,7 @@ export namespace Lifecycle_Effect {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Lifecycle_Election_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -2327,7 +2328,7 @@ export namespace Lifecycle_Election_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Election_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2343,6 +2344,7 @@ export namespace Lifecycle_Election_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Lifecycle_Election {
+
   /** Template payload fields */
   export interface Payload {
     elector: Party;
@@ -2362,7 +2364,7 @@ export namespace Lifecycle_Election {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Election,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2378,6 +2380,7 @@ export namespace Lifecycle_Election {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Lifecycle_ElectionEffect {
+
   /** Template payload fields */
   export interface Payload {
     providers: Party[];
@@ -2398,7 +2401,7 @@ export namespace Lifecycle_ElectionEffect {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Lifecycle_ElectionEffect,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2414,6 +2417,7 @@ export namespace Lifecycle_ElectionEffect {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Lifecycle_Distribution_Event {
+
   /** Template payload fields */
   export interface Payload {
     providers: Party[];
@@ -2430,7 +2434,7 @@ export namespace Lifecycle_Distribution_Event {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Distribution_Event,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2446,6 +2450,7 @@ export namespace Lifecycle_Distribution_Event {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Lifecycle_Replacement_Event {
+
   /** Template payload fields */
   export interface Payload {
     providers: Party[];
@@ -2461,7 +2466,7 @@ export namespace Lifecycle_Replacement_Event {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Replacement_Event,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2477,6 +2482,7 @@ export namespace Lifecycle_Replacement_Event {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Lifecycle_Claim_Rule {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -2491,7 +2497,7 @@ export namespace Lifecycle_Claim_Rule {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Claim_Rule,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2507,6 +2513,7 @@ export namespace Lifecycle_Claim_Rule {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Lifecycle_Distribution_Rule {
+
   /** Template payload fields */
   export interface Payload {
     providers: Party[];
@@ -2520,7 +2527,7 @@ export namespace Lifecycle_Distribution_Rule {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Distribution_Rule,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2536,6 +2543,7 @@ export namespace Lifecycle_Distribution_Rule {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Lifecycle_Replacement_Rule {
+
   /** Template payload fields */
   export interface Payload {
     providers: Party[];
@@ -2549,7 +2557,7 @@ export namespace Lifecycle_Replacement_Rule {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Replacement_Rule,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2565,6 +2573,7 @@ export namespace Lifecycle_Replacement_Rule {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Settlement_Batch {
+
   /** Template payload fields */
   export interface Payload {
     instructor: Party;
@@ -2581,7 +2590,7 @@ export namespace Settlement_Batch {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Settlement_Batch,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2597,6 +2606,7 @@ export namespace Settlement_Batch {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Settlement_Factory {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -2607,7 +2617,7 @@ export namespace Settlement_Factory {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Settlement_Factory,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2623,6 +2633,7 @@ export namespace Settlement_Factory {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Settlement_Instruction {
+
   /** Template payload fields */
   export interface Payload {
     instructor: Party;
@@ -2643,7 +2654,7 @@ export namespace Settlement_Instruction {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Settlement_Instruction,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2659,6 +2670,7 @@ export namespace Settlement_Instruction {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Settlement_RouteProvider_IntermediatedStatic {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -2670,7 +2682,7 @@ export namespace Settlement_RouteProvider_IntermediatedStatic {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Settlement_RouteProvider_IntermediatedStatic,
-      argument: payload,
+      argument: payload
     };
   }
 }
@@ -2686,6 +2698,7 @@ export namespace Settlement_RouteProvider_IntermediatedStatic {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Settlement_RouteProvider_SingleCustodian {
+
   /** Template payload fields */
   export interface Payload {
     provider: Party;
@@ -2697,7 +2710,213 @@ export namespace Settlement_RouteProvider_SingleCustodian {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Settlement_RouteProvider_SingleCustodian,
-      argument: payload,
+      argument: payload
+    };
+  }
+}
+
+/**
+ * Compliance_Reference_ComplianceReference
+ * Role: state
+ * Template ID: lunar-dollar:Compliance.Reference:ComplianceReference
+ * Choices: UpdateReference
+ *
+ * @example
+ * const cmd = Compliance_Reference_ComplianceReference.create({ operator: 'alice::1220...', publicParty: 'alice::1220...', complianceRegistryCid: { unpack: 'id-1' } });
+ * const contractId = await ledger.create(cmd.templateId, cmd.argument);
+ */
+export namespace Compliance_Reference_ComplianceReference {
+
+  /** Template payload fields */
+  export interface Payload {
+    operator: Party;
+    publicParty: Party;
+    complianceRegistryCid: ContractId<Compliance_Registry.ComplianceRegistry>;
+  }
+
+  /** Create a new ComplianceReference contract */
+  export function create(payload: Payload): Command<Payload> {
+    return {
+      templateId: TemplateIds.Compliance_Reference_ComplianceReference,
+      argument: payload
+    };
+  }
+
+  /** Exercise UpdateReference choice */
+  export function updateReference(
+    contractId: ContractId<Payload>,
+    args: {
+      newRegistryCid: ContractId<Compliance_Registry.ComplianceRegistry>;
+    }
+  ): Command<unknown> {
+    return {
+      templateId: TemplateIds.Compliance_Reference_ComplianceReference,
+      choice: 'UpdateReference',
+      contractId: contractId as string,
+      argument: args
+    };
+  }
+}
+
+/**
+ * Compliance_Registry_ComplianceRegistry
+ * Role: state
+ * Template ID: lunar-dollar:Compliance.Registry:ComplianceRegistry
+ * Choices: ValidateTransfer, AddValidator, RemoveValidator, UpdateValidator
+ *
+ * @example
+ * const cmd = Compliance_Registry_ComplianceRegistry.create({ operator: 'alice::1220...', activeValidators: { unpack: 'id-1' } });
+ * const contractId = await ledger.create(cmd.templateId, cmd.argument);
+ */
+export namespace Compliance_Registry_ComplianceRegistry {
+
+  /** Template payload fields */
+  export interface Payload {
+    operator: Party;
+    activeValidators: ContractId<Compliance_Validator.TransferValidator>[];
+  }
+
+  /** Create a new ComplianceRegistry contract */
+  export function create(payload: Payload): Command<Payload> {
+    return {
+      templateId: TemplateIds.Compliance_Registry_ComplianceRegistry,
+      argument: payload
+    };
+  }
+
+  /** Exercise ValidateTransfer choice */
+  export function validateTransfer(
+    contractId: ContractId<Payload>,
+    args: {
+      sender: Party;
+      receiver: Party;
+      amount: Numeric;
+      instrument: InstrumentKey;
+    }
+  ): Command<Compliance_Validator.ValidationResult[]> {
+    return {
+      templateId: TemplateIds.Compliance_Registry_ComplianceRegistry,
+      choice: 'ValidateTransfer',
+      contractId: contractId as string,
+      argument: args
+    };
+  }
+
+  /** Exercise AddValidator choice */
+  export function addValidator(
+    contractId: ContractId<Payload>,
+    args: {
+      validatorCid: ContractId<Compliance_Validator.TransferValidator>;
+    }
+  ): Command<unknown> {
+    return {
+      templateId: TemplateIds.Compliance_Registry_ComplianceRegistry,
+      choice: 'AddValidator',
+      contractId: contractId as string,
+      argument: args
+    };
+  }
+
+  /** Exercise RemoveValidator choice */
+  export function removeValidator(
+    contractId: ContractId<Payload>,
+    args: {
+      validatorCid: ContractId<Compliance_Validator.TransferValidator>;
+    }
+  ): Command<unknown> {
+    return {
+      templateId: TemplateIds.Compliance_Registry_ComplianceRegistry,
+      choice: 'RemoveValidator',
+      contractId: contractId as string,
+      argument: args
+    };
+  }
+
+  /** Exercise UpdateValidator choice - replaces an old validator CID with a new one */
+  export function updateValidator(
+    contractId: ContractId<Payload>,
+    args: {
+      oldValidatorCid: ContractId<Compliance_Validator.TransferValidator>;
+      newValidatorCid: ContractId<Compliance_Validator.TransferValidator>;
+    }
+  ): Command<unknown> {
+    return {
+      templateId: TemplateIds.Compliance_Registry_ComplianceRegistry,
+      choice: 'UpdateValidator',
+      contractId: contractId as string,
+      argument: args
+    };
+  }
+}
+
+/**
+ * Compliance_Validators_Blacklist_BlacklistValidator
+ * Role: state
+ * Template ID: lunar-dollar:Compliance.Validators.Blacklist:BlacklistValidator
+ * Choices: AddToBlacklist, RemoveFromBlacklist, UpdateBlacklist
+ *
+ * @example
+ * const cmd = Compliance_Validators_Blacklist_BlacklistValidator.create({ operator: 'alice::1220...', blacklistedParties: 'alice::1220...' });
+ * const contractId = await ledger.create(cmd.templateId, cmd.argument);
+ */
+export namespace Compliance_Validators_Blacklist_BlacklistValidator {
+
+  /** Template payload fields */
+  export interface Payload {
+    operator: Party;
+    blacklistedParties: Party[];
+  }
+
+  /** Create a new BlacklistValidator contract */
+  export function create(payload: Payload): Command<Payload> {
+    return {
+      templateId: TemplateIds.Compliance_Validators_Blacklist_BlacklistValidator,
+      argument: payload
+    };
+  }
+
+  /** Exercise AddToBlacklist choice */
+  export function addToBlacklist(
+    contractId: ContractId<Payload>,
+    args: {
+      party: Party;
+    }
+  ): Command<unknown> {
+    return {
+      templateId: TemplateIds.Compliance_Validators_Blacklist_BlacklistValidator,
+      choice: 'AddToBlacklist',
+      contractId: contractId as string,
+      argument: args
+    };
+  }
+
+  /** Exercise RemoveFromBlacklist choice */
+  export function removeFromBlacklist(
+    contractId: ContractId<Payload>,
+    args: {
+      party: Party;
+    }
+  ): Command<unknown> {
+    return {
+      templateId: TemplateIds.Compliance_Validators_Blacklist_BlacklistValidator,
+      choice: 'RemoveFromBlacklist',
+      contractId: contractId as string,
+      argument: args
+    };
+  }
+
+  /** Exercise UpdateBlacklist choice */
+  export function updateBlacklist(
+    contractId: ContractId<Payload>,
+    args: {
+      newBlacklist: Party[];
+    }
+  ): Command<unknown> {
+    return {
+      templateId: TemplateIds.Compliance_Validators_Blacklist_BlacklistValidator,
+      choice: 'UpdateBlacklist',
+      contractId: contractId as string,
+      argument: args
     };
   }
 }
@@ -2706,23 +2925,26 @@ export namespace Settlement_RouteProvider_SingleCustodian {
  * LunarDollar
  * Role: state
  * Template ID: lunar-dollar:LunarDollar:LunarDollar
- * Choices: Mint, Merge
+ * Choices: Mint, Merge, UpdateComplianceRegistry
  *
  * @example
- * const cmd = LunarDollar.create({ instrumentKey: {...} });
+ * const cmd = LunarDollar.create({ instrumentKey: {...}, complianceRegistryCid: { unpack: 'id-1' }, publicParty: 'alice::1220...' });
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace LunarDollar {
+
   /** Template payload fields */
   export interface Payload {
     instrumentKey: InstrumentKey;
+    complianceRegistryCid: ContractId<Compliance_Registry.ComplianceRegistry>;
+    publicParty: Party;
   }
 
   /** Create a new LunarDollar contract */
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.LunarDollar,
-      argument: payload,
+      argument: payload
     };
   }
 
@@ -2736,9 +2958,9 @@ export namespace LunarDollar {
   ): Command<unknown> {
     return {
       templateId: TemplateIds.LunarDollar,
-      choice: "Mint",
+      choice: 'Mint',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 
@@ -2752,9 +2974,24 @@ export namespace LunarDollar {
   ): Command<unknown> {
     return {
       templateId: TemplateIds.LunarDollar,
-      choice: "Merge",
+      choice: 'Merge',
       contractId: contractId as string,
-      argument: args,
+      argument: args
+    };
+  }
+
+  /** Exercise UpdateComplianceRegistry choice */
+  export function updateComplianceRegistry(
+    contractId: ContractId<Payload>,
+    args: {
+      newRegistryCid: ContractId<Compliance_Registry.ComplianceRegistry>;
+    }
+  ): Command<unknown> {
+    return {
+      templateId: TemplateIds.LunarDollar,
+      choice: 'UpdateComplianceRegistry',
+      contractId: contractId as string,
+      argument: args
     };
   }
 }
@@ -2763,13 +3000,14 @@ export namespace LunarDollar {
  * PaymentReceiver
  * Role: state
  * Template ID: lunar-dollar:PaymentReceiver:PaymentReceiver
- * Choices: Pay
+ * Choices: RequestPayment, GrantAccess
  *
  * @example
  * const cmd = PaymentReceiver.create({ receiver: 'alice::1220...', receiverAccount: {...}, instrumentKey: {...} });
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace PaymentReceiver {
+
   /** Template payload fields */
   export interface Payload {
     receiver: Party;
@@ -2783,26 +3021,41 @@ export namespace PaymentReceiver {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.PaymentReceiver,
-      argument: payload,
+      argument: payload
     };
   }
 
-  /** Exercise Pay choice */
-  export function pay(
+  /** Exercise RequestPayment choice */
+  export function requestPayment(
+    contractId: ContractId<Payload>,
+    args: {
+      payer: Party;
+      resource: string;
+      maxPrice: Numeric;
+    }
+  ): Command<unknown> {
+    return {
+      templateId: TemplateIds.PaymentReceiver,
+      choice: 'RequestPayment',
+      contractId: contractId as string,
+      argument: args
+    };
+  }
+
+  /** Exercise GrantAccess choice */
+  export function grantAccess(
     contractId: ContractId<Payload>,
     args: {
       payer: Party;
       sessionId: string;
       resource: string;
-      maxPrice: Numeric;
-      holdingCid: ContractId<Holding>;
     }
   ): Command<unknown> {
     return {
       templateId: TemplateIds.PaymentReceiver,
-      choice: "Pay",
+      choice: 'GrantAccess',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 }
@@ -2818,6 +3071,7 @@ export namespace PaymentReceiver {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace PaymentReceiver_AccessGrant {
+
   /** Template payload fields */
   export interface Payload {
     receiver: Party;
@@ -2831,7 +3085,7 @@ export namespace PaymentReceiver_AccessGrant {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.PaymentReceiver_AccessGrant,
-      argument: payload,
+      argument: payload
     };
   }
 
@@ -2842,9 +3096,9 @@ export namespace PaymentReceiver_AccessGrant {
   ): Command<void> {
     return {
       templateId: TemplateIds.PaymentReceiver_AccessGrant,
-      choice: "ConsumeAccess",
+      choice: 'ConsumeAccess',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 }
@@ -2860,6 +3114,7 @@ export namespace PaymentReceiver_AccessGrant {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace TransferRequest {
+
   /** Template payload fields */
   export interface Payload {
     receiverAccount: AccountKey;
@@ -2872,7 +3127,7 @@ export namespace TransferRequest {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.TransferRequest,
-      argument: payload,
+      argument: payload
     };
   }
 
@@ -2885,9 +3140,9 @@ export namespace TransferRequest {
   ): Command<unknown> {
     return {
       templateId: TemplateIds.TransferRequest,
-      choice: "Accept",
+      choice: 'Accept',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 
@@ -2898,9 +3153,9 @@ export namespace TransferRequest {
   ): Command<void> {
     return {
       templateId: TemplateIds.TransferRequest,
-      choice: "Decline",
+      choice: 'Decline',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 
@@ -2911,9 +3166,9 @@ export namespace TransferRequest {
   ): Command<void> {
     return {
       templateId: TemplateIds.TransferRequest,
-      choice: "Withdraw",
+      choice: 'Withdraw',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 }
@@ -2929,6 +3184,7 @@ export namespace TransferRequest {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Workflow_CreateAccount_Request {
+
   /** Template payload fields */
   export interface Payload {
     custodian: Party;
@@ -2939,7 +3195,7 @@ export namespace Workflow_CreateAccount_Request {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Workflow_CreateAccount_Request,
-      argument: payload,
+      argument: payload
     };
   }
 
@@ -2956,9 +3212,9 @@ export namespace Workflow_CreateAccount_Request {
   ): Command<AccountKey> {
     return {
       templateId: TemplateIds.Workflow_CreateAccount_Request,
-      choice: "Accept",
+      choice: 'Accept',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 
@@ -2969,9 +3225,9 @@ export namespace Workflow_CreateAccount_Request {
   ): Command<void> {
     return {
       templateId: TemplateIds.Workflow_CreateAccount_Request,
-      choice: "Decline",
+      choice: 'Decline',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 
@@ -2982,9 +3238,9 @@ export namespace Workflow_CreateAccount_Request {
   ): Command<void> {
     return {
       templateId: TemplateIds.Workflow_CreateAccount_Request,
-      choice: "Withdraw",
+      choice: 'Withdraw',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 }
@@ -3000,6 +3256,7 @@ export namespace Workflow_CreateAccount_Request {
  * const contractId = await ledger.create(cmd.templateId, cmd.argument);
  */
 export namespace Workflow_CreditAccount_Request {
+
   /** Template payload fields */
   export interface Payload {
     account: AccountKey;
@@ -3011,7 +3268,7 @@ export namespace Workflow_CreditAccount_Request {
   export function create(payload: Payload): Command<Payload> {
     return {
       templateId: TemplateIds.Workflow_CreditAccount_Request,
-      argument: payload,
+      argument: payload
     };
   }
 
@@ -3022,9 +3279,9 @@ export namespace Workflow_CreditAccount_Request {
   ): Command<unknown> {
     return {
       templateId: TemplateIds.Workflow_CreditAccount_Request,
-      choice: "Accept",
+      choice: 'Accept',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 
@@ -3035,9 +3292,9 @@ export namespace Workflow_CreditAccount_Request {
   ): Command<void> {
     return {
       templateId: TemplateIds.Workflow_CreditAccount_Request,
-      choice: "Decline",
+      choice: 'Decline',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 
@@ -3048,9 +3305,9 @@ export namespace Workflow_CreditAccount_Request {
   ): Command<void> {
     return {
       templateId: TemplateIds.Workflow_CreditAccount_Request,
-      choice: "Withdraw",
+      choice: 'Withdraw',
       contractId: contractId as string,
-      argument: args,
+      argument: args
     };
   }
 }
@@ -3067,816 +3324,677 @@ export namespace Query {
   }
 
   /** Query Account_Account_Factory contracts */
-  export function account_Account_Factory(
-    filter?: Partial<Account_Account_Factory.Payload>
-  ): QuerySpec<Account_Account_Factory.Payload> {
+  export function account_Account_Factory(filter?: Partial<Account_Account_Factory.Payload>): QuerySpec<Account_Account_Factory.Payload> {
     return {
       templateId: TemplateIds.Account_Account_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Account contracts */
-  export function account(
-    filter?: Partial<Account.Payload>
-  ): QuerySpec<Account.Payload> {
+  export function account(filter?: Partial<Account.Payload>): QuerySpec<Account.Payload> {
     return {
       templateId: TemplateIds.Account,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Claims_Lifecycle_Rule contracts */
-  export function claims_Lifecycle_Rule(
-    filter?: Partial<Claims_Lifecycle_Rule.Payload>
-  ): QuerySpec<Claims_Lifecycle_Rule.Payload> {
+  export function claims_Lifecycle_Rule(filter?: Partial<Claims_Lifecycle_Rule.Payload>): QuerySpec<Claims_Lifecycle_Rule.Payload> {
     return {
       templateId: TemplateIds.Claims_Lifecycle_Rule,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Data_Numeric_Observation_Factory contracts */
-  export function data_Numeric_Observation_Factory(
-    filter?: Partial<Data_Numeric_Observation_Factory.Payload>
-  ): QuerySpec<Data_Numeric_Observation_Factory.Payload> {
+  export function data_Numeric_Observation_Factory(filter?: Partial<Data_Numeric_Observation_Factory.Payload>): QuerySpec<Data_Numeric_Observation_Factory.Payload> {
     return {
       templateId: TemplateIds.Data_Numeric_Observation_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Data_Numeric_Observation contracts */
-  export function data_Numeric_Observation(
-    filter?: Partial<Data_Numeric_Observation.Payload>
-  ): QuerySpec<Data_Numeric_Observation.Payload> {
+  export function data_Numeric_Observation(filter?: Partial<Data_Numeric_Observation.Payload>): QuerySpec<Data_Numeric_Observation.Payload> {
     return {
       templateId: TemplateIds.Data_Numeric_Observation,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Data_Reference_HolidayCalendar_Factory contracts */
-  export function data_Reference_HolidayCalendar_Factory(
-    filter?: Partial<Data_Reference_HolidayCalendar_Factory.Payload>
-  ): QuerySpec<Data_Reference_HolidayCalendar_Factory.Payload> {
+  export function data_Reference_HolidayCalendar_Factory(filter?: Partial<Data_Reference_HolidayCalendar_Factory.Payload>): QuerySpec<Data_Reference_HolidayCalendar_Factory.Payload> {
     return {
       templateId: TemplateIds.Data_Reference_HolidayCalendar_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Data_Reference_HolidayCalendar contracts */
-  export function data_Reference_HolidayCalendar(
-    filter?: Partial<Data_Reference_HolidayCalendar.Payload>
-  ): QuerySpec<Data_Reference_HolidayCalendar.Payload> {
+  export function data_Reference_HolidayCalendar(filter?: Partial<Data_Reference_HolidayCalendar.Payload>): QuerySpec<Data_Reference_HolidayCalendar.Payload> {
     return {
       templateId: TemplateIds.Data_Reference_HolidayCalendar,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Data_Time_DateClock contracts */
-  export function data_Time_DateClock(
-    filter?: Partial<Data_Time_DateClock.Payload>
-  ): QuerySpec<Data_Time_DateClock.Payload> {
+  export function data_Time_DateClock(filter?: Partial<Data_Time_DateClock.Payload>): QuerySpec<Data_Time_DateClock.Payload> {
     return {
       templateId: TemplateIds.Data_Time_DateClock,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Data_Time_DateClockUpdate_DateClockUpdateEvent contracts */
-  export function data_Time_DateClockUpdate_DateClockUpdateEvent(
-    filter?: Partial<Data_Time_DateClockUpdate_DateClockUpdateEvent.Payload>
-  ): QuerySpec<Data_Time_DateClockUpdate_DateClockUpdateEvent.Payload> {
+  export function data_Time_DateClockUpdate_DateClockUpdateEvent(filter?: Partial<Data_Time_DateClockUpdate_DateClockUpdateEvent.Payload>): QuerySpec<Data_Time_DateClockUpdate_DateClockUpdateEvent.Payload> {
     return {
       templateId: TemplateIds.Data_Time_DateClockUpdate_DateClockUpdateEvent,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Data_Time_LedgerTime contracts */
-  export function data_Time_LedgerTime(
-    filter?: Partial<Data_Time_LedgerTime.Payload>
-  ): QuerySpec<Data_Time_LedgerTime.Payload> {
+  export function data_Time_LedgerTime(filter?: Partial<Data_Time_LedgerTime.Payload>): QuerySpec<Data_Time_LedgerTime.Payload> {
     return {
       templateId: TemplateIds.Data_Time_LedgerTime,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Holding_BaseHolding contracts */
-  export function holding_BaseHolding(
-    filter?: Partial<Holding_BaseHolding.Payload>
-  ): QuerySpec<Holding_BaseHolding.Payload> {
+  export function holding_BaseHolding(filter?: Partial<Holding_BaseHolding.Payload>): QuerySpec<Holding_BaseHolding.Payload> {
     return {
       templateId: TemplateIds.Holding_BaseHolding,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Holding_Factory contracts */
-  export function holding_Factory(
-    filter?: Partial<Holding_Factory.Payload>
-  ): QuerySpec<Holding_Factory.Payload> {
+  export function holding_Factory(filter?: Partial<Holding_Factory.Payload>): QuerySpec<Holding_Factory.Payload> {
     return {
       templateId: TemplateIds.Holding_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Holding_Fungible contracts */
-  export function holding_Fungible(
-    filter?: Partial<Holding_Fungible.Payload>
-  ): QuerySpec<Holding_Fungible.Payload> {
+  export function holding_Fungible(filter?: Partial<Holding_Fungible.Payload>): QuerySpec<Holding_Fungible.Payload> {
     return {
       templateId: TemplateIds.Holding_Fungible,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Holding_Transferable contracts */
-  export function holding_Transferable(
-    filter?: Partial<Holding_Transferable.Payload>
-  ): QuerySpec<Holding_Transferable.Payload> {
+  export function holding_Transferable(filter?: Partial<Holding_Transferable.Payload>): QuerySpec<Holding_Transferable.Payload> {
     return {
       templateId: TemplateIds.Holding_Transferable,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Holding_TransferableFungible contracts */
-  export function holding_TransferableFungible(
-    filter?: Partial<Holding_TransferableFungible.Payload>
-  ): QuerySpec<Holding_TransferableFungible.Payload> {
+  export function holding_TransferableFungible(filter?: Partial<Holding_TransferableFungible.Payload>): QuerySpec<Holding_TransferableFungible.Payload> {
     return {
       templateId: TemplateIds.Holding_TransferableFungible,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Bond_Callable_Factory contracts */
-  export function bond_Callable_Factory(
-    filter?: Partial<Bond_Callable_Factory.Payload>
-  ): QuerySpec<Bond_Callable_Factory.Payload> {
+  export function bond_Callable_Factory(filter?: Partial<Bond_Callable_Factory.Payload>): QuerySpec<Bond_Callable_Factory.Payload> {
     return {
       templateId: TemplateIds.Bond_Callable_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Bond_Callable_Instrument contracts */
-  export function bond_Callable_Instrument(
-    filter?: Partial<Bond_Callable_Instrument.Payload>
-  ): QuerySpec<Bond_Callable_Instrument.Payload> {
+  export function bond_Callable_Instrument(filter?: Partial<Bond_Callable_Instrument.Payload>): QuerySpec<Bond_Callable_Instrument.Payload> {
     return {
       templateId: TemplateIds.Bond_Callable_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Bond_FixedRate_Factory contracts */
-  export function bond_FixedRate_Factory(
-    filter?: Partial<Bond_FixedRate_Factory.Payload>
-  ): QuerySpec<Bond_FixedRate_Factory.Payload> {
+  export function bond_FixedRate_Factory(filter?: Partial<Bond_FixedRate_Factory.Payload>): QuerySpec<Bond_FixedRate_Factory.Payload> {
     return {
       templateId: TemplateIds.Bond_FixedRate_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Bond_FixedRate_Instrument contracts */
-  export function bond_FixedRate_Instrument(
-    filter?: Partial<Bond_FixedRate_Instrument.Payload>
-  ): QuerySpec<Bond_FixedRate_Instrument.Payload> {
+  export function bond_FixedRate_Instrument(filter?: Partial<Bond_FixedRate_Instrument.Payload>): QuerySpec<Bond_FixedRate_Instrument.Payload> {
     return {
       templateId: TemplateIds.Bond_FixedRate_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Bond_FloatingRate_Factory contracts */
-  export function bond_FloatingRate_Factory(
-    filter?: Partial<Bond_FloatingRate_Factory.Payload>
-  ): QuerySpec<Bond_FloatingRate_Factory.Payload> {
+  export function bond_FloatingRate_Factory(filter?: Partial<Bond_FloatingRate_Factory.Payload>): QuerySpec<Bond_FloatingRate_Factory.Payload> {
     return {
       templateId: TemplateIds.Bond_FloatingRate_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Bond_FloatingRate_Instrument contracts */
-  export function bond_FloatingRate_Instrument(
-    filter?: Partial<Bond_FloatingRate_Instrument.Payload>
-  ): QuerySpec<Bond_FloatingRate_Instrument.Payload> {
+  export function bond_FloatingRate_Instrument(filter?: Partial<Bond_FloatingRate_Instrument.Payload>): QuerySpec<Bond_FloatingRate_Instrument.Payload> {
     return {
       templateId: TemplateIds.Bond_FloatingRate_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Bond_InflationLinked_Factory contracts */
-  export function bond_InflationLinked_Factory(
-    filter?: Partial<Bond_InflationLinked_Factory.Payload>
-  ): QuerySpec<Bond_InflationLinked_Factory.Payload> {
+  export function bond_InflationLinked_Factory(filter?: Partial<Bond_InflationLinked_Factory.Payload>): QuerySpec<Bond_InflationLinked_Factory.Payload> {
     return {
       templateId: TemplateIds.Bond_InflationLinked_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Bond_InflationLinked_Instrument contracts */
-  export function bond_InflationLinked_Instrument(
-    filter?: Partial<Bond_InflationLinked_Instrument.Payload>
-  ): QuerySpec<Bond_InflationLinked_Instrument.Payload> {
+  export function bond_InflationLinked_Instrument(filter?: Partial<Bond_InflationLinked_Instrument.Payload>): QuerySpec<Bond_InflationLinked_Instrument.Payload> {
     return {
       templateId: TemplateIds.Bond_InflationLinked_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Bond_ZeroCoupon_Factory contracts */
-  export function bond_ZeroCoupon_Factory(
-    filter?: Partial<Bond_ZeroCoupon_Factory.Payload>
-  ): QuerySpec<Bond_ZeroCoupon_Factory.Payload> {
+  export function bond_ZeroCoupon_Factory(filter?: Partial<Bond_ZeroCoupon_Factory.Payload>): QuerySpec<Bond_ZeroCoupon_Factory.Payload> {
     return {
       templateId: TemplateIds.Bond_ZeroCoupon_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Bond_ZeroCoupon_Instrument contracts */
-  export function bond_ZeroCoupon_Instrument(
-    filter?: Partial<Bond_ZeroCoupon_Instrument.Payload>
-  ): QuerySpec<Bond_ZeroCoupon_Instrument.Payload> {
+  export function bond_ZeroCoupon_Instrument(filter?: Partial<Bond_ZeroCoupon_Instrument.Payload>): QuerySpec<Bond_ZeroCoupon_Instrument.Payload> {
     return {
       templateId: TemplateIds.Bond_ZeroCoupon_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Equity_Factory contracts */
-  export function equity_Factory(
-    filter?: Partial<Equity_Factory.Payload>
-  ): QuerySpec<Equity_Factory.Payload> {
+  export function equity_Factory(filter?: Partial<Equity_Factory.Payload>): QuerySpec<Equity_Factory.Payload> {
     return {
       templateId: TemplateIds.Equity_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Equity_Instrument contracts */
-  export function equity_Instrument(
-    filter?: Partial<Equity_Instrument.Payload>
-  ): QuerySpec<Equity_Instrument.Payload> {
+  export function equity_Instrument(filter?: Partial<Equity_Instrument.Payload>): QuerySpec<Equity_Instrument.Payload> {
     return {
       templateId: TemplateIds.Equity_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Generic_Factory contracts */
-  export function generic_Factory(
-    filter?: Partial<Generic_Factory.Payload>
-  ): QuerySpec<Generic_Factory.Payload> {
+  export function generic_Factory(filter?: Partial<Generic_Factory.Payload>): QuerySpec<Generic_Factory.Payload> {
     return {
       templateId: TemplateIds.Generic_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Generic_Instrument contracts */
-  export function generic_Instrument(
-    filter?: Partial<Generic_Instrument.Payload>
-  ): QuerySpec<Generic_Instrument.Payload> {
+  export function generic_Instrument(filter?: Partial<Generic_Instrument.Payload>): QuerySpec<Generic_Instrument.Payload> {
     return {
       templateId: TemplateIds.Generic_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Generic_Lifecycle_Rule contracts */
-  export function generic_Lifecycle_Rule(
-    filter?: Partial<Generic_Lifecycle_Rule.Payload>
-  ): QuerySpec<Generic_Lifecycle_Rule.Payload> {
+  export function generic_Lifecycle_Rule(filter?: Partial<Generic_Lifecycle_Rule.Payload>): QuerySpec<Generic_Lifecycle_Rule.Payload> {
     return {
       templateId: TemplateIds.Generic_Lifecycle_Rule,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Option_BarrierEuropeanCash_Factory contracts */
-  export function option_BarrierEuropeanCash_Factory(
-    filter?: Partial<Option_BarrierEuropeanCash_Factory.Payload>
-  ): QuerySpec<Option_BarrierEuropeanCash_Factory.Payload> {
+  export function option_BarrierEuropeanCash_Factory(filter?: Partial<Option_BarrierEuropeanCash_Factory.Payload>): QuerySpec<Option_BarrierEuropeanCash_Factory.Payload> {
     return {
       templateId: TemplateIds.Option_BarrierEuropeanCash_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Option_BarrierEuropeanCash_Instrument contracts */
-  export function option_BarrierEuropeanCash_Instrument(
-    filter?: Partial<Option_BarrierEuropeanCash_Instrument.Payload>
-  ): QuerySpec<Option_BarrierEuropeanCash_Instrument.Payload> {
+  export function option_BarrierEuropeanCash_Instrument(filter?: Partial<Option_BarrierEuropeanCash_Instrument.Payload>): QuerySpec<Option_BarrierEuropeanCash_Instrument.Payload> {
     return {
       templateId: TemplateIds.Option_BarrierEuropeanCash_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Option_Dividend_Election_Factory contracts */
-  export function option_Dividend_Election_Factory(
-    filter?: Partial<Option_Dividend_Election_Factory.Payload>
-  ): QuerySpec<Option_Dividend_Election_Factory.Payload> {
+  export function option_Dividend_Election_Factory(filter?: Partial<Option_Dividend_Election_Factory.Payload>): QuerySpec<Option_Dividend_Election_Factory.Payload> {
     return {
       templateId: TemplateIds.Option_Dividend_Election_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Option_Dividend_Factory contracts */
-  export function option_Dividend_Factory(
-    filter?: Partial<Option_Dividend_Factory.Payload>
-  ): QuerySpec<Option_Dividend_Factory.Payload> {
+  export function option_Dividend_Factory(filter?: Partial<Option_Dividend_Factory.Payload>): QuerySpec<Option_Dividend_Factory.Payload> {
     return {
       templateId: TemplateIds.Option_Dividend_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Option_Dividend_Instrument contracts */
-  export function option_Dividend_Instrument(
-    filter?: Partial<Option_Dividend_Instrument.Payload>
-  ): QuerySpec<Option_Dividend_Instrument.Payload> {
+  export function option_Dividend_Instrument(filter?: Partial<Option_Dividend_Instrument.Payload>): QuerySpec<Option_Dividend_Instrument.Payload> {
     return {
       templateId: TemplateIds.Option_Dividend_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Option_EuropeanCash_Factory contracts */
-  export function option_EuropeanCash_Factory(
-    filter?: Partial<Option_EuropeanCash_Factory.Payload>
-  ): QuerySpec<Option_EuropeanCash_Factory.Payload> {
+  export function option_EuropeanCash_Factory(filter?: Partial<Option_EuropeanCash_Factory.Payload>): QuerySpec<Option_EuropeanCash_Factory.Payload> {
     return {
       templateId: TemplateIds.Option_EuropeanCash_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Option_EuropeanCash_Instrument contracts */
-  export function option_EuropeanCash_Instrument(
-    filter?: Partial<Option_EuropeanCash_Instrument.Payload>
-  ): QuerySpec<Option_EuropeanCash_Instrument.Payload> {
+  export function option_EuropeanCash_Instrument(filter?: Partial<Option_EuropeanCash_Instrument.Payload>): QuerySpec<Option_EuropeanCash_Instrument.Payload> {
     return {
       templateId: TemplateIds.Option_EuropeanCash_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Option_EuropeanPhysical_Factory contracts */
-  export function option_EuropeanPhysical_Factory(
-    filter?: Partial<Option_EuropeanPhysical_Factory.Payload>
-  ): QuerySpec<Option_EuropeanPhysical_Factory.Payload> {
+  export function option_EuropeanPhysical_Factory(filter?: Partial<Option_EuropeanPhysical_Factory.Payload>): QuerySpec<Option_EuropeanPhysical_Factory.Payload> {
     return {
       templateId: TemplateIds.Option_EuropeanPhysical_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Option_EuropeanPhysical_Instrument contracts */
-  export function option_EuropeanPhysical_Instrument(
-    filter?: Partial<Option_EuropeanPhysical_Instrument.Payload>
-  ): QuerySpec<Option_EuropeanPhysical_Instrument.Payload> {
+  export function option_EuropeanPhysical_Instrument(filter?: Partial<Option_EuropeanPhysical_Instrument.Payload>): QuerySpec<Option_EuropeanPhysical_Instrument.Payload> {
     return {
       templateId: TemplateIds.Option_EuropeanPhysical_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query StructuredProduct_AutoCallable_Factory contracts */
-  export function structuredProduct_AutoCallable_Factory(
-    filter?: Partial<StructuredProduct_AutoCallable_Factory.Payload>
-  ): QuerySpec<StructuredProduct_AutoCallable_Factory.Payload> {
+  export function structuredProduct_AutoCallable_Factory(filter?: Partial<StructuredProduct_AutoCallable_Factory.Payload>): QuerySpec<StructuredProduct_AutoCallable_Factory.Payload> {
     return {
       templateId: TemplateIds.StructuredProduct_AutoCallable_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query StructuredProduct_AutoCallable_Instrument contracts */
-  export function structuredProduct_AutoCallable_Instrument(
-    filter?: Partial<StructuredProduct_AutoCallable_Instrument.Payload>
-  ): QuerySpec<StructuredProduct_AutoCallable_Instrument.Payload> {
+  export function structuredProduct_AutoCallable_Instrument(filter?: Partial<StructuredProduct_AutoCallable_Instrument.Payload>): QuerySpec<StructuredProduct_AutoCallable_Instrument.Payload> {
     return {
       templateId: TemplateIds.StructuredProduct_AutoCallable_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query StructuredProduct_BarrierReverseConvertible_Factory contracts */
-  export function structuredProduct_BarrierReverseConvertible_Factory(
-    filter?: Partial<StructuredProduct_BarrierReverseConvertible_Factory.Payload>
-  ): QuerySpec<StructuredProduct_BarrierReverseConvertible_Factory.Payload> {
+  export function structuredProduct_BarrierReverseConvertible_Factory(filter?: Partial<StructuredProduct_BarrierReverseConvertible_Factory.Payload>): QuerySpec<StructuredProduct_BarrierReverseConvertible_Factory.Payload> {
     return {
-      templateId:
-        TemplateIds.StructuredProduct_BarrierReverseConvertible_Factory,
-      filter: filter || {},
+      templateId: TemplateIds.StructuredProduct_BarrierReverseConvertible_Factory,
+      filter: filter || {}
     };
   }
 
   /** Query StructuredProduct_BarrierReverseConvertible_Instrument contracts */
-  export function structuredProduct_BarrierReverseConvertible_Instrument(
-    filter?: Partial<StructuredProduct_BarrierReverseConvertible_Instrument.Payload>
-  ): QuerySpec<StructuredProduct_BarrierReverseConvertible_Instrument.Payload> {
+  export function structuredProduct_BarrierReverseConvertible_Instrument(filter?: Partial<StructuredProduct_BarrierReverseConvertible_Instrument.Payload>): QuerySpec<StructuredProduct_BarrierReverseConvertible_Instrument.Payload> {
     return {
-      templateId:
-        TemplateIds.StructuredProduct_BarrierReverseConvertible_Instrument,
-      filter: filter || {},
+      templateId: TemplateIds.StructuredProduct_BarrierReverseConvertible_Instrument,
+      filter: filter || {}
     };
   }
 
   /** Query Swap_Asset_DistributionRule contracts */
-  export function swap_Asset_DistributionRule(
-    filter?: Partial<Swap_Asset_DistributionRule.Payload>
-  ): QuerySpec<Swap_Asset_DistributionRule.Payload> {
+  export function swap_Asset_DistributionRule(filter?: Partial<Swap_Asset_DistributionRule.Payload>): QuerySpec<Swap_Asset_DistributionRule.Payload> {
     return {
       templateId: TemplateIds.Swap_Asset_DistributionRule,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Swap_Asset_Factory contracts */
-  export function swap_Asset_Factory(
-    filter?: Partial<Swap_Asset_Factory.Payload>
-  ): QuerySpec<Swap_Asset_Factory.Payload> {
+  export function swap_Asset_Factory(filter?: Partial<Swap_Asset_Factory.Payload>): QuerySpec<Swap_Asset_Factory.Payload> {
     return {
       templateId: TemplateIds.Swap_Asset_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Swap_Asset_Instrument contracts */
-  export function swap_Asset_Instrument(
-    filter?: Partial<Swap_Asset_Instrument.Payload>
-  ): QuerySpec<Swap_Asset_Instrument.Payload> {
+  export function swap_Asset_Instrument(filter?: Partial<Swap_Asset_Instrument.Payload>): QuerySpec<Swap_Asset_Instrument.Payload> {
     return {
       templateId: TemplateIds.Swap_Asset_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Swap_CreditDefault_Factory contracts */
-  export function swap_CreditDefault_Factory(
-    filter?: Partial<Swap_CreditDefault_Factory.Payload>
-  ): QuerySpec<Swap_CreditDefault_Factory.Payload> {
+  export function swap_CreditDefault_Factory(filter?: Partial<Swap_CreditDefault_Factory.Payload>): QuerySpec<Swap_CreditDefault_Factory.Payload> {
     return {
       templateId: TemplateIds.Swap_CreditDefault_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Swap_CreditDefault_Instrument contracts */
-  export function swap_CreditDefault_Instrument(
-    filter?: Partial<Swap_CreditDefault_Instrument.Payload>
-  ): QuerySpec<Swap_CreditDefault_Instrument.Payload> {
+  export function swap_CreditDefault_Instrument(filter?: Partial<Swap_CreditDefault_Instrument.Payload>): QuerySpec<Swap_CreditDefault_Instrument.Payload> {
     return {
       templateId: TemplateIds.Swap_CreditDefault_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Swap_Currency_Factory contracts */
-  export function swap_Currency_Factory(
-    filter?: Partial<Swap_Currency_Factory.Payload>
-  ): QuerySpec<Swap_Currency_Factory.Payload> {
+  export function swap_Currency_Factory(filter?: Partial<Swap_Currency_Factory.Payload>): QuerySpec<Swap_Currency_Factory.Payload> {
     return {
       templateId: TemplateIds.Swap_Currency_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Swap_Currency_Instrument contracts */
-  export function swap_Currency_Instrument(
-    filter?: Partial<Swap_Currency_Instrument.Payload>
-  ): QuerySpec<Swap_Currency_Instrument.Payload> {
+  export function swap_Currency_Instrument(filter?: Partial<Swap_Currency_Instrument.Payload>): QuerySpec<Swap_Currency_Instrument.Payload> {
     return {
       templateId: TemplateIds.Swap_Currency_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Swap_ForeignExchange_Factory contracts */
-  export function swap_ForeignExchange_Factory(
-    filter?: Partial<Swap_ForeignExchange_Factory.Payload>
-  ): QuerySpec<Swap_ForeignExchange_Factory.Payload> {
+  export function swap_ForeignExchange_Factory(filter?: Partial<Swap_ForeignExchange_Factory.Payload>): QuerySpec<Swap_ForeignExchange_Factory.Payload> {
     return {
       templateId: TemplateIds.Swap_ForeignExchange_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Swap_ForeignExchange_Instrument contracts */
-  export function swap_ForeignExchange_Instrument(
-    filter?: Partial<Swap_ForeignExchange_Instrument.Payload>
-  ): QuerySpec<Swap_ForeignExchange_Instrument.Payload> {
+  export function swap_ForeignExchange_Instrument(filter?: Partial<Swap_ForeignExchange_Instrument.Payload>): QuerySpec<Swap_ForeignExchange_Instrument.Payload> {
     return {
       templateId: TemplateIds.Swap_ForeignExchange_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Swap_Fpml_Factory contracts */
-  export function swap_Fpml_Factory(
-    filter?: Partial<Swap_Fpml_Factory.Payload>
-  ): QuerySpec<Swap_Fpml_Factory.Payload> {
+  export function swap_Fpml_Factory(filter?: Partial<Swap_Fpml_Factory.Payload>): QuerySpec<Swap_Fpml_Factory.Payload> {
     return {
       templateId: TemplateIds.Swap_Fpml_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Swap_Fpml_Instrument contracts */
-  export function swap_Fpml_Instrument(
-    filter?: Partial<Swap_Fpml_Instrument.Payload>
-  ): QuerySpec<Swap_Fpml_Instrument.Payload> {
+  export function swap_Fpml_Instrument(filter?: Partial<Swap_Fpml_Instrument.Payload>): QuerySpec<Swap_Fpml_Instrument.Payload> {
     return {
       templateId: TemplateIds.Swap_Fpml_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Swap_InterestRate_Factory contracts */
-  export function swap_InterestRate_Factory(
-    filter?: Partial<Swap_InterestRate_Factory.Payload>
-  ): QuerySpec<Swap_InterestRate_Factory.Payload> {
+  export function swap_InterestRate_Factory(filter?: Partial<Swap_InterestRate_Factory.Payload>): QuerySpec<Swap_InterestRate_Factory.Payload> {
     return {
       templateId: TemplateIds.Swap_InterestRate_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Swap_InterestRate_Instrument contracts */
-  export function swap_InterestRate_Instrument(
-    filter?: Partial<Swap_InterestRate_Instrument.Payload>
-  ): QuerySpec<Swap_InterestRate_Instrument.Payload> {
+  export function swap_InterestRate_Instrument(filter?: Partial<Swap_InterestRate_Instrument.Payload>): QuerySpec<Swap_InterestRate_Instrument.Payload> {
     return {
       templateId: TemplateIds.Swap_InterestRate_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Token_Factory contracts */
-  export function token_Factory(
-    filter?: Partial<Token_Factory.Payload>
-  ): QuerySpec<Token_Factory.Payload> {
+  export function token_Factory(filter?: Partial<Token_Factory.Payload>): QuerySpec<Token_Factory.Payload> {
     return {
       templateId: TemplateIds.Token_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Token_Instrument contracts */
-  export function token_Instrument(
-    filter?: Partial<Token_Instrument.Payload>
-  ): QuerySpec<Token_Instrument.Payload> {
+  export function token_Instrument(filter?: Partial<Token_Instrument.Payload>): QuerySpec<Token_Instrument.Payload> {
     return {
       templateId: TemplateIds.Token_Instrument,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Account_Account_Reference contracts */
-  export function account_Account_Reference(
-    filter?: Partial<Account_Account_Reference.Payload>
-  ): QuerySpec<Account_Account_Reference.Payload> {
+  export function account_Account_Reference(filter?: Partial<Account_Account_Reference.Payload>): QuerySpec<Account_Account_Reference.Payload> {
     return {
       templateId: TemplateIds.Account_Account_Reference,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Holding_Factory_Reference contracts */
-  export function holding_Factory_Reference(
-    filter?: Partial<Holding_Factory_Reference.Payload>
-  ): QuerySpec<Holding_Factory_Reference.Payload> {
+  export function holding_Factory_Reference(filter?: Partial<Holding_Factory_Reference.Payload>): QuerySpec<Holding_Factory_Reference.Payload> {
     return {
       templateId: TemplateIds.Holding_Factory_Reference,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Base_Instrument_Reference contracts */
-  export function base_Instrument_Reference(
-    filter?: Partial<Base_Instrument_Reference.Payload>
-  ): QuerySpec<Base_Instrument_Reference.Payload> {
+  export function base_Instrument_Reference(filter?: Partial<Base_Instrument_Reference.Payload>): QuerySpec<Base_Instrument_Reference.Payload> {
     return {
       templateId: TemplateIds.Base_Instrument_Reference,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Lifecycle_Effect contracts */
-  export function lifecycle_Effect(
-    filter?: Partial<Lifecycle_Effect.Payload>
-  ): QuerySpec<Lifecycle_Effect.Payload> {
+  export function lifecycle_Effect(filter?: Partial<Lifecycle_Effect.Payload>): QuerySpec<Lifecycle_Effect.Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Effect,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Lifecycle_Election_Factory contracts */
-  export function lifecycle_Election_Factory(
-    filter?: Partial<Lifecycle_Election_Factory.Payload>
-  ): QuerySpec<Lifecycle_Election_Factory.Payload> {
+  export function lifecycle_Election_Factory(filter?: Partial<Lifecycle_Election_Factory.Payload>): QuerySpec<Lifecycle_Election_Factory.Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Election_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Lifecycle_Election contracts */
-  export function lifecycle_Election(
-    filter?: Partial<Lifecycle_Election.Payload>
-  ): QuerySpec<Lifecycle_Election.Payload> {
+  export function lifecycle_Election(filter?: Partial<Lifecycle_Election.Payload>): QuerySpec<Lifecycle_Election.Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Election,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Lifecycle_ElectionEffect contracts */
-  export function lifecycle_ElectionEffect(
-    filter?: Partial<Lifecycle_ElectionEffect.Payload>
-  ): QuerySpec<Lifecycle_ElectionEffect.Payload> {
+  export function lifecycle_ElectionEffect(filter?: Partial<Lifecycle_ElectionEffect.Payload>): QuerySpec<Lifecycle_ElectionEffect.Payload> {
     return {
       templateId: TemplateIds.Lifecycle_ElectionEffect,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Lifecycle_Distribution_Event contracts */
-  export function lifecycle_Distribution_Event(
-    filter?: Partial<Lifecycle_Distribution_Event.Payload>
-  ): QuerySpec<Lifecycle_Distribution_Event.Payload> {
+  export function lifecycle_Distribution_Event(filter?: Partial<Lifecycle_Distribution_Event.Payload>): QuerySpec<Lifecycle_Distribution_Event.Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Distribution_Event,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Lifecycle_Replacement_Event contracts */
-  export function lifecycle_Replacement_Event(
-    filter?: Partial<Lifecycle_Replacement_Event.Payload>
-  ): QuerySpec<Lifecycle_Replacement_Event.Payload> {
+  export function lifecycle_Replacement_Event(filter?: Partial<Lifecycle_Replacement_Event.Payload>): QuerySpec<Lifecycle_Replacement_Event.Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Replacement_Event,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Lifecycle_Claim_Rule contracts */
-  export function lifecycle_Claim_Rule(
-    filter?: Partial<Lifecycle_Claim_Rule.Payload>
-  ): QuerySpec<Lifecycle_Claim_Rule.Payload> {
+  export function lifecycle_Claim_Rule(filter?: Partial<Lifecycle_Claim_Rule.Payload>): QuerySpec<Lifecycle_Claim_Rule.Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Claim_Rule,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Lifecycle_Distribution_Rule contracts */
-  export function lifecycle_Distribution_Rule(
-    filter?: Partial<Lifecycle_Distribution_Rule.Payload>
-  ): QuerySpec<Lifecycle_Distribution_Rule.Payload> {
+  export function lifecycle_Distribution_Rule(filter?: Partial<Lifecycle_Distribution_Rule.Payload>): QuerySpec<Lifecycle_Distribution_Rule.Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Distribution_Rule,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Lifecycle_Replacement_Rule contracts */
-  export function lifecycle_Replacement_Rule(
-    filter?: Partial<Lifecycle_Replacement_Rule.Payload>
-  ): QuerySpec<Lifecycle_Replacement_Rule.Payload> {
+  export function lifecycle_Replacement_Rule(filter?: Partial<Lifecycle_Replacement_Rule.Payload>): QuerySpec<Lifecycle_Replacement_Rule.Payload> {
     return {
       templateId: TemplateIds.Lifecycle_Replacement_Rule,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Settlement_Batch contracts */
-  export function settlement_Batch(
-    filter?: Partial<Settlement_Batch.Payload>
-  ): QuerySpec<Settlement_Batch.Payload> {
+  export function settlement_Batch(filter?: Partial<Settlement_Batch.Payload>): QuerySpec<Settlement_Batch.Payload> {
     return {
       templateId: TemplateIds.Settlement_Batch,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Settlement_Factory contracts */
-  export function settlement_Factory(
-    filter?: Partial<Settlement_Factory.Payload>
-  ): QuerySpec<Settlement_Factory.Payload> {
+  export function settlement_Factory(filter?: Partial<Settlement_Factory.Payload>): QuerySpec<Settlement_Factory.Payload> {
     return {
       templateId: TemplateIds.Settlement_Factory,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Settlement_Instruction contracts */
-  export function settlement_Instruction(
-    filter?: Partial<Settlement_Instruction.Payload>
-  ): QuerySpec<Settlement_Instruction.Payload> {
+  export function settlement_Instruction(filter?: Partial<Settlement_Instruction.Payload>): QuerySpec<Settlement_Instruction.Payload> {
     return {
       templateId: TemplateIds.Settlement_Instruction,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Settlement_RouteProvider_IntermediatedStatic contracts */
-  export function settlement_RouteProvider_IntermediatedStatic(
-    filter?: Partial<Settlement_RouteProvider_IntermediatedStatic.Payload>
-  ): QuerySpec<Settlement_RouteProvider_IntermediatedStatic.Payload> {
+  export function settlement_RouteProvider_IntermediatedStatic(filter?: Partial<Settlement_RouteProvider_IntermediatedStatic.Payload>): QuerySpec<Settlement_RouteProvider_IntermediatedStatic.Payload> {
     return {
       templateId: TemplateIds.Settlement_RouteProvider_IntermediatedStatic,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Settlement_RouteProvider_SingleCustodian contracts */
-  export function settlement_RouteProvider_SingleCustodian(
-    filter?: Partial<Settlement_RouteProvider_SingleCustodian.Payload>
-  ): QuerySpec<Settlement_RouteProvider_SingleCustodian.Payload> {
+  export function settlement_RouteProvider_SingleCustodian(filter?: Partial<Settlement_RouteProvider_SingleCustodian.Payload>): QuerySpec<Settlement_RouteProvider_SingleCustodian.Payload> {
     return {
       templateId: TemplateIds.Settlement_RouteProvider_SingleCustodian,
-      filter: filter || {},
+      filter: filter || {}
+    };
+  }
+
+  /** Query Compliance_Reference_ComplianceReference contracts */
+  export function compliance_Reference_ComplianceReference(filter?: Partial<Compliance_Reference_ComplianceReference.Payload>): QuerySpec<Compliance_Reference_ComplianceReference.Payload> {
+    return {
+      templateId: TemplateIds.Compliance_Reference_ComplianceReference,
+      filter: filter || {}
+    };
+  }
+
+  /** Query Compliance_Registry_ComplianceRegistry contracts */
+  export function compliance_Registry_ComplianceRegistry(filter?: Partial<Compliance_Registry_ComplianceRegistry.Payload>): QuerySpec<Compliance_Registry_ComplianceRegistry.Payload> {
+    return {
+      templateId: TemplateIds.Compliance_Registry_ComplianceRegistry,
+      filter: filter || {}
+    };
+  }
+
+  /** Query Compliance_Validators_Blacklist_BlacklistValidator contracts */
+  export function compliance_Validators_Blacklist_BlacklistValidator(filter?: Partial<Compliance_Validators_Blacklist_BlacklistValidator.Payload>): QuerySpec<Compliance_Validators_Blacklist_BlacklistValidator.Payload> {
+    return {
+      templateId: TemplateIds.Compliance_Validators_Blacklist_BlacklistValidator,
+      filter: filter || {}
     };
   }
 
   /** Query LunarDollar contracts */
-  export function lunarDollar(
-    filter?: Partial<LunarDollar.Payload>
-  ): QuerySpec<LunarDollar.Payload> {
+  export function lunarDollar(filter?: Partial<LunarDollar.Payload>): QuerySpec<LunarDollar.Payload> {
     return {
       templateId: TemplateIds.LunarDollar,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query PaymentReceiver contracts */
-  export function paymentReceiver(
-    filter?: Partial<PaymentReceiver.Payload>
-  ): QuerySpec<PaymentReceiver.Payload> {
+  export function paymentReceiver(filter?: Partial<PaymentReceiver.Payload>): QuerySpec<PaymentReceiver.Payload> {
     return {
       templateId: TemplateIds.PaymentReceiver,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query PaymentReceiver_AccessGrant contracts */
-  export function paymentReceiver_AccessGrant(
-    filter?: Partial<PaymentReceiver_AccessGrant.Payload>
-  ): QuerySpec<PaymentReceiver_AccessGrant.Payload> {
+  export function paymentReceiver_AccessGrant(filter?: Partial<PaymentReceiver_AccessGrant.Payload>): QuerySpec<PaymentReceiver_AccessGrant.Payload> {
     return {
       templateId: TemplateIds.PaymentReceiver_AccessGrant,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query TransferRequest contracts */
-  export function transferRequest(
-    filter?: Partial<TransferRequest.Payload>
-  ): QuerySpec<TransferRequest.Payload> {
+  export function transferRequest(filter?: Partial<TransferRequest.Payload>): QuerySpec<TransferRequest.Payload> {
     return {
       templateId: TemplateIds.TransferRequest,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Workflow_CreateAccount_Request contracts */
-  export function workflow_CreateAccount_Request(
-    filter?: Partial<Workflow_CreateAccount_Request.Payload>
-  ): QuerySpec<Workflow_CreateAccount_Request.Payload> {
+  export function workflow_CreateAccount_Request(filter?: Partial<Workflow_CreateAccount_Request.Payload>): QuerySpec<Workflow_CreateAccount_Request.Payload> {
     return {
       templateId: TemplateIds.Workflow_CreateAccount_Request,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
 
   /** Query Workflow_CreditAccount_Request contracts */
-  export function workflow_CreditAccount_Request(
-    filter?: Partial<Workflow_CreditAccount_Request.Payload>
-  ): QuerySpec<Workflow_CreditAccount_Request.Payload> {
+  export function workflow_CreditAccount_Request(filter?: Partial<Workflow_CreditAccount_Request.Payload>): QuerySpec<Workflow_CreditAccount_Request.Payload> {
     return {
       templateId: TemplateIds.Workflow_CreditAccount_Request,
-      filter: filter || {},
+      filter: filter || {}
     };
   }
+
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3886,758 +4004,595 @@ export namespace Query {
 
 export namespace TypeGuards {
   /** Type guard for Account_Account_Factory.Payload */
-  export function isAccountAccountFactory(
-    obj: unknown
-  ): obj is Account_Account_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isAccountAccountFactory(obj: unknown): obj is Account_Account_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Account.Payload */
   export function isAccount(obj: unknown): obj is Account.Payload {
-    if (!obj || typeof obj !== "object") return false;
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return (
-      "custodian" in record && "owner" in record && "controllers" in record
-    );
+    return 'custodian' in record && 'owner' in record && 'controllers' in record;
   }
 
   /** Type guard for Claims_Lifecycle_Rule.Payload */
-  export function isClaimsLifecycleRule(
-    obj: unknown
-  ): obj is Claims_Lifecycle_Rule.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isClaimsLifecycleRule(obj: unknown): obj is Claims_Lifecycle_Rule.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return (
-      "providers" in record && "lifecycler" in record && "observers" in record
-    );
+    return 'providers' in record && 'lifecycler' in record && 'observers' in record;
   }
 
   /** Type guard for Data_Numeric_Observation_Factory.Payload */
-  export function isDataNumericObservationFactory(
-    obj: unknown
-  ): obj is Data_Numeric_Observation_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isDataNumericObservationFactory(obj: unknown): obj is Data_Numeric_Observation_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Data_Numeric_Observation.Payload */
-  export function isDataNumericObservation(
-    obj: unknown
-  ): obj is Data_Numeric_Observation.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isDataNumericObservation(obj: unknown): obj is Data_Numeric_Observation.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "id" in record && "observations" in record;
+    return 'provider' in record && 'id' in record && 'observations' in record;
   }
 
   /** Type guard for Data_Reference_HolidayCalendar_Factory.Payload */
-  export function isDataReferenceHolidayCalendarFactory(
-    obj: unknown
-  ): obj is Data_Reference_HolidayCalendar_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isDataReferenceHolidayCalendarFactory(obj: unknown): obj is Data_Reference_HolidayCalendar_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Data_Reference_HolidayCalendar.Payload */
-  export function isDataReferenceHolidayCalendar(
-    obj: unknown
-  ): obj is Data_Reference_HolidayCalendar.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isDataReferenceHolidayCalendar(obj: unknown): obj is Data_Reference_HolidayCalendar.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return (
-      "calendar" in record && "observers" in record && "provider" in record
-    );
+    return 'calendar' in record && 'observers' in record && 'provider' in record;
   }
 
   /** Type guard for Data_Time_DateClock.Payload */
-  export function isDataTimeDateClock(
-    obj: unknown
-  ): obj is Data_Time_DateClock.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isDataTimeDateClock(obj: unknown): obj is Data_Time_DateClock.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "providers" in record && "date" in record && "id" in record;
+    return 'providers' in record && 'date' in record && 'id' in record;
   }
 
   /** Type guard for Data_Time_DateClockUpdate_DateClockUpdateEvent.Payload */
-  export function isDataTimeDateClockUpdateDateClockUpdateEvent(
-    obj: unknown
-  ): obj is Data_Time_DateClockUpdate_DateClockUpdateEvent.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isDataTimeDateClockUpdateDateClockUpdateEvent(obj: unknown): obj is Data_Time_DateClockUpdate_DateClockUpdateEvent.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "providers" in record && "date" in record && "eventTime" in record;
+    return 'providers' in record && 'date' in record && 'eventTime' in record;
   }
 
   /** Type guard for Data_Time_LedgerTime.Payload */
-  export function isDataTimeLedgerTime(
-    obj: unknown
-  ): obj is Data_Time_LedgerTime.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isDataTimeLedgerTime(obj: unknown): obj is Data_Time_LedgerTime.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "providers" in record && "id" in record && "description" in record;
+    return 'providers' in record && 'id' in record && 'description' in record;
   }
 
   /** Type guard for Holding_BaseHolding.Payload */
-  export function isHoldingBaseHolding(
-    obj: unknown
-  ): obj is Holding_BaseHolding.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isHoldingBaseHolding(obj: unknown): obj is Holding_BaseHolding.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "instrument" in record && "account" in record && "amount" in record;
+    return 'instrument' in record && 'account' in record && 'amount' in record;
   }
 
   /** Type guard for Holding_Factory.Payload */
-  export function isHoldingFactory(
-    obj: unknown
-  ): obj is Holding_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isHoldingFactory(obj: unknown): obj is Holding_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "id" in record && "observers" in record;
+    return 'provider' in record && 'id' in record && 'observers' in record;
   }
 
   /** Type guard for Holding_Fungible.Payload */
-  export function isHoldingFungible(
-    obj: unknown
-  ): obj is Holding_Fungible.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isHoldingFungible(obj: unknown): obj is Holding_Fungible.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "instrument" in record && "account" in record && "amount" in record;
+    return 'instrument' in record && 'account' in record && 'amount' in record;
   }
 
   /** Type guard for Holding_Transferable.Payload */
-  export function isHoldingTransferable(
-    obj: unknown
-  ): obj is Holding_Transferable.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isHoldingTransferable(obj: unknown): obj is Holding_Transferable.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "instrument" in record && "account" in record && "amount" in record;
+    return 'instrument' in record && 'account' in record && 'amount' in record;
   }
 
   /** Type guard for Holding_TransferableFungible.Payload */
-  export function isHoldingTransferableFungible(
-    obj: unknown
-  ): obj is Holding_TransferableFungible.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isHoldingTransferableFungible(obj: unknown): obj is Holding_TransferableFungible.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "instrument" in record && "account" in record && "amount" in record;
+    return 'instrument' in record && 'account' in record && 'amount' in record;
   }
 
   /** Type guard for Bond_Callable_Factory.Payload */
-  export function isBondCallableFactory(
-    obj: unknown
-  ): obj is Bond_Callable_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isBondCallableFactory(obj: unknown): obj is Bond_Callable_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Bond_Callable_Instrument.Payload */
-  export function isBondCallableInstrument(
-    obj: unknown
-  ): obj is Bond_Callable_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isBondCallableInstrument(obj: unknown): obj is Bond_Callable_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Bond_FixedRate_Factory.Payload */
-  export function isBondFixedRateFactory(
-    obj: unknown
-  ): obj is Bond_FixedRate_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isBondFixedRateFactory(obj: unknown): obj is Bond_FixedRate_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Bond_FixedRate_Instrument.Payload */
-  export function isBondFixedRateInstrument(
-    obj: unknown
-  ): obj is Bond_FixedRate_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isBondFixedRateInstrument(obj: unknown): obj is Bond_FixedRate_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Bond_FloatingRate_Factory.Payload */
-  export function isBondFloatingRateFactory(
-    obj: unknown
-  ): obj is Bond_FloatingRate_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isBondFloatingRateFactory(obj: unknown): obj is Bond_FloatingRate_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Bond_FloatingRate_Instrument.Payload */
-  export function isBondFloatingRateInstrument(
-    obj: unknown
-  ): obj is Bond_FloatingRate_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isBondFloatingRateInstrument(obj: unknown): obj is Bond_FloatingRate_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Bond_InflationLinked_Factory.Payload */
-  export function isBondInflationLinkedFactory(
-    obj: unknown
-  ): obj is Bond_InflationLinked_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isBondInflationLinkedFactory(obj: unknown): obj is Bond_InflationLinked_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Bond_InflationLinked_Instrument.Payload */
-  export function isBondInflationLinkedInstrument(
-    obj: unknown
-  ): obj is Bond_InflationLinked_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isBondInflationLinkedInstrument(obj: unknown): obj is Bond_InflationLinked_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Bond_ZeroCoupon_Factory.Payload */
-  export function isBondZeroCouponFactory(
-    obj: unknown
-  ): obj is Bond_ZeroCoupon_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isBondZeroCouponFactory(obj: unknown): obj is Bond_ZeroCoupon_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Bond_ZeroCoupon_Instrument.Payload */
-  export function isBondZeroCouponInstrument(
-    obj: unknown
-  ): obj is Bond_ZeroCoupon_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isBondZeroCouponInstrument(obj: unknown): obj is Bond_ZeroCoupon_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Equity_Factory.Payload */
   export function isEquityFactory(obj: unknown): obj is Equity_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Equity_Instrument.Payload */
-  export function isEquityInstrument(
-    obj: unknown
-  ): obj is Equity_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isEquityInstrument(obj: unknown): obj is Equity_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "issuer" in record && "depository" in record && "id" in record;
+    return 'issuer' in record && 'depository' in record && 'id' in record;
   }
 
   /** Type guard for Generic_Factory.Payload */
-  export function isGenericFactory(
-    obj: unknown
-  ): obj is Generic_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isGenericFactory(obj: unknown): obj is Generic_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Generic_Instrument.Payload */
-  export function isGenericInstrument(
-    obj: unknown
-  ): obj is Generic_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isGenericInstrument(obj: unknown): obj is Generic_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Generic_Lifecycle_Rule.Payload */
-  export function isGenericLifecycleRule(
-    obj: unknown
-  ): obj is Generic_Lifecycle_Rule.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isGenericLifecycleRule(obj: unknown): obj is Generic_Lifecycle_Rule.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return (
-      "providers" in record && "lifecycler" in record && "observers" in record
-    );
+    return 'providers' in record && 'lifecycler' in record && 'observers' in record;
   }
 
   /** Type guard for Option_BarrierEuropeanCash_Factory.Payload */
-  export function isOptionBarrierEuropeanCashFactory(
-    obj: unknown
-  ): obj is Option_BarrierEuropeanCash_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isOptionBarrierEuropeanCashFactory(obj: unknown): obj is Option_BarrierEuropeanCash_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Option_BarrierEuropeanCash_Instrument.Payload */
-  export function isOptionBarrierEuropeanCashInstrument(
-    obj: unknown
-  ): obj is Option_BarrierEuropeanCash_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isOptionBarrierEuropeanCashInstrument(obj: unknown): obj is Option_BarrierEuropeanCash_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Option_Dividend_Election_Factory.Payload */
-  export function isOptionDividendElectionFactory(
-    obj: unknown
-  ): obj is Option_Dividend_Election_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isOptionDividendElectionFactory(obj: unknown): obj is Option_Dividend_Election_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Option_Dividend_Factory.Payload */
-  export function isOptionDividendFactory(
-    obj: unknown
-  ): obj is Option_Dividend_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isOptionDividendFactory(obj: unknown): obj is Option_Dividend_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Option_Dividend_Instrument.Payload */
-  export function isOptionDividendInstrument(
-    obj: unknown
-  ): obj is Option_Dividend_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isOptionDividendInstrument(obj: unknown): obj is Option_Dividend_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Option_EuropeanCash_Factory.Payload */
-  export function isOptionEuropeanCashFactory(
-    obj: unknown
-  ): obj is Option_EuropeanCash_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isOptionEuropeanCashFactory(obj: unknown): obj is Option_EuropeanCash_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Option_EuropeanCash_Instrument.Payload */
-  export function isOptionEuropeanCashInstrument(
-    obj: unknown
-  ): obj is Option_EuropeanCash_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isOptionEuropeanCashInstrument(obj: unknown): obj is Option_EuropeanCash_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Option_EuropeanPhysical_Factory.Payload */
-  export function isOptionEuropeanPhysicalFactory(
-    obj: unknown
-  ): obj is Option_EuropeanPhysical_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isOptionEuropeanPhysicalFactory(obj: unknown): obj is Option_EuropeanPhysical_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Option_EuropeanPhysical_Instrument.Payload */
-  export function isOptionEuropeanPhysicalInstrument(
-    obj: unknown
-  ): obj is Option_EuropeanPhysical_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isOptionEuropeanPhysicalInstrument(obj: unknown): obj is Option_EuropeanPhysical_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for StructuredProduct_AutoCallable_Factory.Payload */
-  export function isStructuredProductAutoCallableFactory(
-    obj: unknown
-  ): obj is StructuredProduct_AutoCallable_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isStructuredProductAutoCallableFactory(obj: unknown): obj is StructuredProduct_AutoCallable_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for StructuredProduct_AutoCallable_Instrument.Payload */
-  export function isStructuredProductAutoCallableInstrument(
-    obj: unknown
-  ): obj is StructuredProduct_AutoCallable_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isStructuredProductAutoCallableInstrument(obj: unknown): obj is StructuredProduct_AutoCallable_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for StructuredProduct_BarrierReverseConvertible_Factory.Payload */
-  export function isStructuredProductBarrierReverseConvertibleFactory(
-    obj: unknown
-  ): obj is StructuredProduct_BarrierReverseConvertible_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isStructuredProductBarrierReverseConvertibleFactory(obj: unknown): obj is StructuredProduct_BarrierReverseConvertible_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for StructuredProduct_BarrierReverseConvertible_Instrument.Payload */
-  export function isStructuredProductBarrierReverseConvertibleInstrument(
-    obj: unknown
-  ): obj is StructuredProduct_BarrierReverseConvertible_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isStructuredProductBarrierReverseConvertibleInstrument(obj: unknown): obj is StructuredProduct_BarrierReverseConvertible_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Swap_Asset_DistributionRule.Payload */
-  export function isSwapAssetDistributionRule(
-    obj: unknown
-  ): obj is Swap_Asset_DistributionRule.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSwapAssetDistributionRule(obj: unknown): obj is Swap_Asset_DistributionRule.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return (
-      "providers" in record && "lifecycler" in record && "observers" in record
-    );
+    return 'providers' in record && 'lifecycler' in record && 'observers' in record;
   }
 
   /** Type guard for Swap_Asset_Factory.Payload */
-  export function isSwapAssetFactory(
-    obj: unknown
-  ): obj is Swap_Asset_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSwapAssetFactory(obj: unknown): obj is Swap_Asset_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Swap_Asset_Instrument.Payload */
-  export function isSwapAssetInstrument(
-    obj: unknown
-  ): obj is Swap_Asset_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSwapAssetInstrument(obj: unknown): obj is Swap_Asset_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Swap_CreditDefault_Factory.Payload */
-  export function isSwapCreditDefaultFactory(
-    obj: unknown
-  ): obj is Swap_CreditDefault_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSwapCreditDefaultFactory(obj: unknown): obj is Swap_CreditDefault_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Swap_CreditDefault_Instrument.Payload */
-  export function isSwapCreditDefaultInstrument(
-    obj: unknown
-  ): obj is Swap_CreditDefault_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSwapCreditDefaultInstrument(obj: unknown): obj is Swap_CreditDefault_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Swap_Currency_Factory.Payload */
-  export function isSwapCurrencyFactory(
-    obj: unknown
-  ): obj is Swap_Currency_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSwapCurrencyFactory(obj: unknown): obj is Swap_Currency_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Swap_Currency_Instrument.Payload */
-  export function isSwapCurrencyInstrument(
-    obj: unknown
-  ): obj is Swap_Currency_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSwapCurrencyInstrument(obj: unknown): obj is Swap_Currency_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Swap_ForeignExchange_Factory.Payload */
-  export function isSwapForeignExchangeFactory(
-    obj: unknown
-  ): obj is Swap_ForeignExchange_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSwapForeignExchangeFactory(obj: unknown): obj is Swap_ForeignExchange_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Swap_ForeignExchange_Instrument.Payload */
-  export function isSwapForeignExchangeInstrument(
-    obj: unknown
-  ): obj is Swap_ForeignExchange_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSwapForeignExchangeInstrument(obj: unknown): obj is Swap_ForeignExchange_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Swap_Fpml_Factory.Payload */
-  export function isSwapFpmlFactory(
-    obj: unknown
-  ): obj is Swap_Fpml_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSwapFpmlFactory(obj: unknown): obj is Swap_Fpml_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Swap_Fpml_Instrument.Payload */
-  export function isSwapFpmlInstrument(
-    obj: unknown
-  ): obj is Swap_Fpml_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSwapFpmlInstrument(obj: unknown): obj is Swap_Fpml_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Swap_InterestRate_Factory.Payload */
-  export function isSwapInterestRateFactory(
-    obj: unknown
-  ): obj is Swap_InterestRate_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSwapInterestRateFactory(obj: unknown): obj is Swap_InterestRate_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Swap_InterestRate_Instrument.Payload */
-  export function isSwapInterestRateInstrument(
-    obj: unknown
-  ): obj is Swap_InterestRate_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSwapInterestRateInstrument(obj: unknown): obj is Swap_InterestRate_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Token_Factory.Payload */
   export function isTokenFactory(obj: unknown): obj is Token_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Token_Instrument.Payload */
-  export function isTokenInstrument(
-    obj: unknown
-  ): obj is Token_Instrument.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isTokenInstrument(obj: unknown): obj is Token_Instrument.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "depository" in record && "issuer" in record && "id" in record;
+    return 'depository' in record && 'issuer' in record && 'id' in record;
   }
 
   /** Type guard for Account_Account_Reference.Payload */
-  export function isAccountAccountReference(
-    obj: unknown
-  ): obj is Account_Account_Reference.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isAccountAccountReference(obj: unknown): obj is Account_Account_Reference.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "accountView" in record && "cid" in record && "observers" in record;
+    return 'accountView' in record && 'cid' in record && 'observers' in record;
   }
 
   /** Type guard for Holding_Factory_Reference.Payload */
-  export function isHoldingFactoryReference(
-    obj: unknown
-  ): obj is Holding_Factory_Reference.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isHoldingFactoryReference(obj: unknown): obj is Holding_Factory_Reference.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "factoryView" in record && "cid" in record && "observers" in record;
+    return 'factoryView' in record && 'cid' in record && 'observers' in record;
   }
 
   /** Type guard for Base_Instrument_Reference.Payload */
-  export function isBaseInstrumentReference(
-    obj: unknown
-  ): obj is Base_Instrument_Reference.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isBaseInstrumentReference(obj: unknown): obj is Base_Instrument_Reference.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return (
-      "instrumentView" in record && "cid" in record && "observers" in record
-    );
+    return 'instrumentView' in record && 'cid' in record && 'observers' in record;
   }
 
   /** Type guard for Lifecycle_Effect.Payload */
-  export function isLifecycleEffect(
-    obj: unknown
-  ): obj is Lifecycle_Effect.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isLifecycleEffect(obj: unknown): obj is Lifecycle_Effect.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "providers" in record && "id" in record && "description" in record;
+    return 'providers' in record && 'id' in record && 'description' in record;
   }
 
   /** Type guard for Lifecycle_Election_Factory.Payload */
-  export function isLifecycleElectionFactory(
-    obj: unknown
-  ): obj is Lifecycle_Election_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isLifecycleElectionFactory(obj: unknown): obj is Lifecycle_Election_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Lifecycle_Election.Payload */
-  export function isLifecycleElection(
-    obj: unknown
-  ): obj is Lifecycle_Election.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isLifecycleElection(obj: unknown): obj is Lifecycle_Election.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return (
-      "elector" in record && "counterparty" in record && "provider" in record
-    );
+    return 'elector' in record && 'counterparty' in record && 'provider' in record;
   }
 
   /** Type guard for Lifecycle_ElectionEffect.Payload */
-  export function isLifecycleElectionEffect(
-    obj: unknown
-  ): obj is Lifecycle_ElectionEffect.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isLifecycleElectionEffect(obj: unknown): obj is Lifecycle_ElectionEffect.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "providers" in record && "custodian" in record && "owner" in record;
+    return 'providers' in record && 'custodian' in record && 'owner' in record;
   }
 
   /** Type guard for Lifecycle_Distribution_Event.Payload */
-  export function isLifecycleDistributionEvent(
-    obj: unknown
-  ): obj is Lifecycle_Distribution_Event.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isLifecycleDistributionEvent(obj: unknown): obj is Lifecycle_Distribution_Event.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "providers" in record && "id" in record && "description" in record;
+    return 'providers' in record && 'id' in record && 'description' in record;
   }
 
   /** Type guard for Lifecycle_Replacement_Event.Payload */
-  export function isLifecycleReplacementEvent(
-    obj: unknown
-  ): obj is Lifecycle_Replacement_Event.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isLifecycleReplacementEvent(obj: unknown): obj is Lifecycle_Replacement_Event.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "providers" in record && "id" in record && "description" in record;
+    return 'providers' in record && 'id' in record && 'description' in record;
   }
 
   /** Type guard for Lifecycle_Claim_Rule.Payload */
-  export function isLifecycleClaimRule(
-    obj: unknown
-  ): obj is Lifecycle_Claim_Rule.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isLifecycleClaimRule(obj: unknown): obj is Lifecycle_Claim_Rule.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "claimers" in record && "settlers" in record;
+    return 'provider' in record && 'claimers' in record && 'settlers' in record;
   }
 
   /** Type guard for Lifecycle_Distribution_Rule.Payload */
-  export function isLifecycleDistributionRule(
-    obj: unknown
-  ): obj is Lifecycle_Distribution_Rule.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isLifecycleDistributionRule(obj: unknown): obj is Lifecycle_Distribution_Rule.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return (
-      "providers" in record && "lifecycler" in record && "observers" in record
-    );
+    return 'providers' in record && 'lifecycler' in record && 'observers' in record;
   }
 
   /** Type guard for Lifecycle_Replacement_Rule.Payload */
-  export function isLifecycleReplacementRule(
-    obj: unknown
-  ): obj is Lifecycle_Replacement_Rule.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isLifecycleReplacementRule(obj: unknown): obj is Lifecycle_Replacement_Rule.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return (
-      "providers" in record && "lifecycler" in record && "observers" in record
-    );
+    return 'providers' in record && 'lifecycler' in record && 'observers' in record;
   }
 
   /** Type guard for Settlement_Batch.Payload */
-  export function isSettlementBatch(
-    obj: unknown
-  ): obj is Settlement_Batch.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSettlementBatch(obj: unknown): obj is Settlement_Batch.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return (
-      "instructor" in record && "consenters" in record && "settlers" in record
-    );
+    return 'instructor' in record && 'consenters' in record && 'settlers' in record;
   }
 
   /** Type guard for Settlement_Factory.Payload */
-  export function isSettlementFactory(
-    obj: unknown
-  ): obj is Settlement_Factory.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSettlementFactory(obj: unknown): obj is Settlement_Factory.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record;
+    return 'provider' in record && 'observers' in record;
   }
 
   /** Type guard for Settlement_Instruction.Payload */
-  export function isSettlementInstruction(
-    obj: unknown
-  ): obj is Settlement_Instruction.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSettlementInstruction(obj: unknown): obj is Settlement_Instruction.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return (
-      "instructor" in record && "consenters" in record && "settlers" in record
-    );
+    return 'instructor' in record && 'consenters' in record && 'settlers' in record;
   }
 
   /** Type guard for Settlement_RouteProvider_IntermediatedStatic.Payload */
-  export function isSettlementRouteProviderIntermediatedStatic(
-    obj: unknown
-  ): obj is Settlement_RouteProvider_IntermediatedStatic.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSettlementRouteProviderIntermediatedStatic(obj: unknown): obj is Settlement_RouteProvider_IntermediatedStatic.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "provider" in record && "observers" in record && "paths" in record;
+    return 'provider' in record && 'observers' in record && 'paths' in record;
   }
 
   /** Type guard for Settlement_RouteProvider_SingleCustodian.Payload */
-  export function isSettlementRouteProviderSingleCustodian(
-    obj: unknown
-  ): obj is Settlement_RouteProvider_SingleCustodian.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isSettlementRouteProviderSingleCustodian(obj: unknown): obj is Settlement_RouteProvider_SingleCustodian.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return (
-      "provider" in record && "observers" in record && "custodian" in record
-    );
+    return 'provider' in record && 'observers' in record && 'custodian' in record;
+  }
+
+  /** Type guard for Compliance_Reference_ComplianceReference.Payload */
+  export function isComplianceReferenceComplianceReference(obj: unknown): obj is Compliance_Reference_ComplianceReference.Payload {
+    if (!obj || typeof obj !== 'object') return false;
+    const record = obj as Record<string, unknown>;
+    return 'operator' in record && 'publicParty' in record && 'complianceRegistryCid' in record;
+  }
+
+  /** Type guard for Compliance_Registry_ComplianceRegistry.Payload */
+  export function isComplianceRegistryComplianceRegistry(obj: unknown): obj is Compliance_Registry_ComplianceRegistry.Payload {
+    if (!obj || typeof obj !== 'object') return false;
+    const record = obj as Record<string, unknown>;
+    return 'operator' in record && 'activeValidators' in record;
+  }
+
+  /** Type guard for Compliance_Validators_Blacklist_BlacklistValidator.Payload */
+  export function isComplianceValidatorsBlacklistBlacklistValidator(obj: unknown): obj is Compliance_Validators_Blacklist_BlacklistValidator.Payload {
+    if (!obj || typeof obj !== 'object') return false;
+    const record = obj as Record<string, unknown>;
+    return 'operator' in record && 'blacklistedParties' in record;
   }
 
   /** Type guard for LunarDollar.Payload */
   export function isLunarDollar(obj: unknown): obj is LunarDollar.Payload {
-    if (!obj || typeof obj !== "object") return false;
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "instrumentKey" in record;
+    return 'instrumentKey' in record && 'complianceRegistryCid' in record && 'publicParty' in record;
   }
 
   /** Type guard for PaymentReceiver.Payload */
-  export function isPaymentReceiver(
-    obj: unknown
-  ): obj is PaymentReceiver.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isPaymentReceiver(obj: unknown): obj is PaymentReceiver.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return (
-      "receiver" in record &&
-      "receiverAccount" in record &&
-      "instrumentKey" in record
-    );
+    return 'receiver' in record && 'receiverAccount' in record && 'instrumentKey' in record;
   }
 
   /** Type guard for PaymentReceiver_AccessGrant.Payload */
-  export function isPaymentReceiverAccessGrant(
-    obj: unknown
-  ): obj is PaymentReceiver_AccessGrant.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isPaymentReceiverAccessGrant(obj: unknown): obj is PaymentReceiver_AccessGrant.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "receiver" in record && "payer" in record && "resource" in record;
+    return 'receiver' in record && 'payer' in record && 'resource' in record;
   }
 
   /** Type guard for TransferRequest.Payload */
-  export function isTransferRequest(
-    obj: unknown
-  ): obj is TransferRequest.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isTransferRequest(obj: unknown): obj is TransferRequest.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return (
-      "receiverAccount" in record &&
-      "instrument" in record &&
-      "amount" in record
-    );
+    return 'receiverAccount' in record && 'instrument' in record && 'amount' in record;
   }
 
   /** Type guard for Workflow_CreateAccount_Request.Payload */
-  export function isWorkflowCreateAccountRequest(
-    obj: unknown
-  ): obj is Workflow_CreateAccount_Request.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isWorkflowCreateAccountRequest(obj: unknown): obj is Workflow_CreateAccount_Request.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "custodian" in record && "owner" in record;
+    return 'custodian' in record && 'owner' in record;
   }
 
   /** Type guard for Workflow_CreditAccount_Request.Payload */
-  export function isWorkflowCreditAccountRequest(
-    obj: unknown
-  ): obj is Workflow_CreditAccount_Request.Payload {
-    if (!obj || typeof obj !== "object") return false;
+  export function isWorkflowCreditAccountRequest(obj: unknown): obj is Workflow_CreditAccount_Request.Payload {
+    if (!obj || typeof obj !== 'object') return false;
     const record = obj as Record<string, unknown>;
-    return "account" in record && "instrument" in record && "amount" in record;
+    return 'account' in record && 'instrument' in record && 'amount' in record;
   }
+
 }
+
 
 // ═══════════════════════════════════════════════════════════════
 // HOLDING TYPES
@@ -4785,7 +4740,7 @@ export const MockFactories = {
    * Generate a mock party identifier
    * @example MockFactories.party('alice') // 'alice::1220abc123'
    */
-  party: (name: string = "test"): Party => {
+  party: (name: string = 'test'): Party => {
     const randomHex = () => Math.random().toString(16).substring(2, 10);
     return `${name}::1220${randomHex()}` as Party;
   },
@@ -4794,8 +4749,8 @@ export const MockFactories = {
    * Generate a mock ID
    * @example MockFactories.id('account') // { unpack: 'account-1234567890' }
    */
-  id: (prefix: string = "id"): Id => ({
-    unpack: `${prefix}-${Date.now()}`,
+  id: (prefix: string = 'id'): Id => ({
+    unpack: `${prefix}-${Date.now()}`
   }),
 
   /**
@@ -4805,7 +4760,7 @@ export const MockFactories = {
   accountKey: (custodian: Party, owner: Party, id?: string): AccountKey => ({
     custodian,
     owner,
-    id: id ? { unpack: id } : MockFactories.id("account"),
+    id: id ? { unpack: id } : MockFactories.id('account')
   }),
 
   /**
@@ -4815,14 +4770,14 @@ export const MockFactories = {
   instrumentKey: (
     depository: Party,
     issuer: Party,
-    id: string = "USD",
-    version: string = "1"
+    id: string = 'USD',
+    version: string = '1'
   ): InstrumentKey => ({
     depository,
     issuer,
     id: { unpack: id },
     version,
-    holdingStandard: "TransferableFungible",
+    holdingStandard: 'TransferableFungible'
   }),
 
   /**
@@ -4831,19 +4786,16 @@ export const MockFactories = {
    */
   holdingFactoryKey: (provider: Party, id?: string): HoldingFactoryKey => ({
     provider,
-    id: id ? { unpack: id } : MockFactories.id("factory"),
+    id: id ? { unpack: id } : MockFactories.id('factory')
   }),
 
   /**
    * Generate a mock Quantity
    * @example MockFactories.quantity(instrumentKey, '1000.0')
    */
-  quantity: (
-    instrument: InstrumentKey,
-    amount: string = "100.0"
-  ): Quantity => ({
+  quantity: (instrument: InstrumentKey, amount: string = '100.0'): Quantity => ({
     unit: instrument,
-    amount: amount as Numeric,
+    amount: amount as Numeric
   }),
 
   /**
@@ -4852,6 +4804,6 @@ export const MockFactories = {
    */
   controllers: (outgoing: Party[], incoming: Party[]): Controllers => ({
     outgoing,
-    incoming,
-  }),
+    incoming
+  })
 };
