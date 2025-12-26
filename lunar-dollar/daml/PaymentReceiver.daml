@@ -8,6 +8,7 @@ import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
 import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), InstrumentKey)
 
 import TransferRequest (TransferRequest(..), Accept(..))
+import Compliance.Registry (ComplianceRegistry)
 
 template AccessGrant
   with
@@ -34,6 +35,7 @@ template PaymentReceiver
     instrumentKey : InstrumentKey
     prices : Map Text Decimal
     publicParty : Party
+    complianceRegistryCid : ContractId ComplianceRegistry
   where
     signatory receiver
     observer publicParty
@@ -58,6 +60,7 @@ template PaymentReceiver
           instrument = instrumentKey
           amount = price
           currentOwner = payer
+          complianceRegistryCid
 
         _ <- exercise transferReqCid Accept with holdingCid
 
@@ -68,4 +71,3 @@ template PaymentReceiver
           resource
           sessionId
           grantedAt = currentTime
-

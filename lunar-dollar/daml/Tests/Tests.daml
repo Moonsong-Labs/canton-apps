@@ -1,13 +1,36 @@
 module Tests.Tests where
 
 import Daml.Script
+import DA.Set qualified as Set
 
 import Scripts.Mint (MintArgs(..), mint)
 import Scripts.Transfer (CreateTransferRequestArgs(..), AcceptTransferRequestArgs(..), createTransferRequest, acceptTransferRequest)
 import Scripts.Balance (BalanceArgs(..), balance)
+import Scripts.Util (lookupParty)
+import Compliance.Registry (ComplianceRegistry(..))
+import Compliance.Validators.Blacklist (BlacklistValidator(..))
+import Compliance.Validator (TransferValidator)
+
+setupCompliance : Script (ContractId ComplianceRegistry)
+setupCompliance = do
+  bank <- lookupParty "Bank"
+  
+  blacklistCid <- submit bank do
+    createCmd BlacklistValidator with
+      operator = bank
+      blacklistedParties = Set.empty
+  
+  let blacklistInterfaceCid = toInterfaceContractId @TransferValidator blacklistCid
+  
+  submit bank do
+    createCmd ComplianceRegistry with
+      operator = bank
+      activeValidators = [blacklistInterfaceCid]
 
 testTransferExactAmount : Script ()
 testTransferExactAmount = do
+  complianceRegistryCid <- setupCompliance
+  
   holdingCid <- mint MintArgs with
     recipient = "Alice"
     amount = 100.0
@@ -16,6 +39,7 @@ testTransferExactAmount = do
     sender = "Alice"
     receiver = "Bob"
     amount = 100.0
+    complianceRegistryCid
 
   _ <- acceptTransferRequest AcceptTransferRequestArgs with
     sender = "Alice"
@@ -30,6 +54,8 @@ testTransferExactAmount = do
 
 testTransferWithSplit : Script ()
 testTransferWithSplit = do
+  complianceRegistryCid <- setupCompliance
+  
   holdingCid <- mint MintArgs with
     recipient = "Alice"
     amount = 500.0
@@ -38,6 +64,7 @@ testTransferWithSplit = do
     sender = "Alice"
     receiver = "Bob"
     amount = 200.0
+    complianceRegistryCid
 
   _ <- acceptTransferRequest AcceptTransferRequestArgs with
     sender = "Alice"
@@ -49,4 +76,3 @@ testTransferWithSplit = do
   balance BalanceArgs with party = "Bob"
 
   pure ()
-

@@ -9,11 +9,13 @@ import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
 
 import PaymentReceiver (PaymentReceiver(..), AccessGrant(..), Pay(..))
 import Scripts.Util (lookupParty, getLNRD)
+import Compliance.Registry (ComplianceRegistry)
 
 data SetupReceiverArgs = SetupReceiverArgs with
   receiver : Text
   prices : Map Text Decimal
   publicParty : Party
+  complianceRegistryCid : ContractId ComplianceRegistry
 
 setupReceiver : SetupReceiverArgs -> Script (ContractId PaymentReceiver)
 setupReceiver args = do
@@ -34,6 +36,7 @@ setupReceiver args = do
       instrumentKey = lnrd.instrumentKey
       prices = args.prices
       publicParty = args.publicParty
+      complianceRegistryCid = args.complianceRegistryCid
 
   debug $ "Created PaymentReceiver for " <> args.receiver
   pure receiverCid

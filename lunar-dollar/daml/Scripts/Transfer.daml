@@ -7,11 +7,13 @@ import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
 
 import Scripts.Util (lookupParty, getLNRD)
 import TransferRequest (TransferRequest(..), Accept(..))
+import Compliance.Registry (ComplianceRegistry)
 
 data CreateTransferRequestArgs = CreateTransferRequestArgs with
   sender : Text
   receiver : Text
   amount : Decimal
+  complianceRegistryCid : ContractId ComplianceRegistry
 
 createTransferRequest : CreateTransferRequestArgs -> Script (ContractId TransferRequest.TransferRequest)
 createTransferRequest args = do
@@ -34,6 +36,7 @@ createTransferRequest args = do
       instrument = instrumentKey
       amount = args.amount
       currentOwner = sender
+      complianceRegistryCid = args.complianceRegistryCid
 
   debug $ "Created transfer request " <> show requestCid <> " from " <> args.sender <> " to " <> args.receiver <> " for " <> show args.amount <> " LNRD"
   
@@ -56,4 +59,3 @@ acceptTransferRequest args = do
   debug $ "Accepted transfer request from " <> args.sender <> " to " <> args.receiver
   
   pure newHoldingCid
-  

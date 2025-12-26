@@ -5,6 +5,7 @@ source: daml
 init-script: Scripts.Setup:setup
 build-options:
   - --target=1.17
+  - -Wno-upgrade-interfaces
 dependencies:
   - daml-prim
   - daml-stdlib
