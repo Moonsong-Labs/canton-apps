@@ -191,6 +191,15 @@ export class PackageResolver {
     this.packageHashes = [];
     this.initialized = false;
     this.initPromise = null;
+    console.log('PackageResolver: Cache cleared');
+  }
+
+  /**
+   * Force re-initialization by clearing cache and fetching packages again.
+   */
+  async reinitialize(baseUrl: string, headers: Record<string, string>): Promise<void> {
+    this.clearCache();
+    await this.initialize(baseUrl, headers);
   }
 
   /**
@@ -217,6 +226,17 @@ export function getPackageResolver(): PackageResolver {
     globalResolver = new PackageResolver();
   }
   return globalResolver;
+}
+
+/**
+ * Reset the global PackageResolver.
+ * Call this when the ledger is restarted to clear stale cache entries.
+ */
+export function resetPackageResolver(): void {
+  if (globalResolver) {
+    globalResolver.clearCache();
+  }
+  globalResolver = null;
 }
 
 /**

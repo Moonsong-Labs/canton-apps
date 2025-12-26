@@ -13,19 +13,31 @@ import {
   Lock, RoutedStep, HoldingStandard, Allocation, Approval
 } from './core/interfaces';
 
-// Additional type imports from Daml Finance packages
-import { HolidayCalendarData } from './daml-js/daml-finance-interface-types-date-v3-3.0.0/lib/Daml/Finance/Interface/Types/Date/V3/Calendar';
-import { PeriodicSchedule } from './daml-js/daml-finance-interface-types-date-v3-3.0.0/lib/Daml/Finance/Interface/Types/Date/V3/Schedule';
-import { DayCountConventionEnum } from './daml-js/daml-finance-interface-types-date-v3-3.0.0/lib/Daml/Finance/Interface/Types/Date/V3/DayCount';
-import { FloatingRate } from './daml-js/daml-finance-interface-instrument-types-v2-2.0.0/lib/Daml/Finance/Interface/Instrument/Types/V2/FloatingRate';
-import { EventData } from './daml-js/daml-finance-interface-claims-v4-4.0.0/lib/Daml/Finance/Interface/Claims/V4/Types';
-import type { OptionTypeEnum as _StructuredProductOptionTypeEnum } from './daml-js/daml-finance-interface-instrument-structuredproduct-v0-0.2.0/lib/Daml/Finance/Interface/Instrument/StructuredProduct/V0/Types';
-import { BarrierTypeEnum, OptionTypeEnum } from './daml-js/daml-finance-interface-instrument-option-v0-0.4.0/lib/Daml/Finance/Interface/Instrument/Option/V0/Types';
-import { SwapStream } from './daml-js/daml-finance-interface-instrument-swap-v0-0.5.0/lib/Daml/Finance/Interface/Instrument/Swap/V0/Fpml/FpmlTypes';
-import { Underlying } from './daml-js/daml-finance-interface-instrument-swap-v0-0.5.0/lib/Daml/Finance/Interface/Instrument/Swap/V0/Asset/Types';
-import * as Daml_Finance_Data_V4_Time_DateClock_Types from './daml-js/daml-finance-data-v4-4.0.0/lib/Daml/Finance/Data/V4/Time/DateClock/Types';
-import * as Daml_Finance_Settlement_V4_Hierarchy from './daml-js/daml-finance-settlement-v4-4.0.0/lib/Daml/Finance/Settlement/V4/Hierarchy';
-import * as Vault_Config from './daml-js/vault-0.0.6/lib/Vault/Config';
+// Stub types for Daml Finance packages (full bindings not generated)
+// These are placeholder types for complex Daml Finance structures
+type HolidayCalendarData = unknown;
+type PeriodicSchedule = unknown;
+type DayCountConventionEnum = string;
+type FloatingRate = unknown;
+type EventData = unknown;
+export type StructuredProductOptionTypeEnum = string;
+type BarrierTypeEnum = string;
+type OptionTypeEnum = string;
+type SwapStream = unknown;
+type Underlying = unknown;
+// eslint-disable-next-line @typescript-eslint/no-namespace
+namespace Daml_Finance_Data_V4_Time_DateClock_Types {
+  export type DateClockUpdateEvent = unknown;
+  export type Unit = unknown;
+}
+// eslint-disable-next-line @typescript-eslint/no-namespace
+namespace Daml_Finance_Settlement_V4_Hierarchy {
+  export type Hierarchy = unknown;
+}
+// eslint-disable-next-line @typescript-eslint/no-namespace
+namespace Vault_Config {
+  export type VaultConfig = unknown;
+}
 
 // Int type from Daml
 type Int = string;
@@ -4496,7 +4508,7 @@ export const MockFactories = {
     issuer,
     id: { unpack: id },
     version,
-    holdingStandard: { tag: 'TransferableFungible' }
+    holdingStandard: 'TransferableFungible'
   }),
 
   /**

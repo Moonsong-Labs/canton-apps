@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useRedeemRequests, useAcceptRedeem, useDeclineRedeem, useCancelRedeem } from '@/hooks/useContracts';
+import { useRedeemRequests, useDeclineRedeem, useCancelRedeem } from '@/hooks/useContracts';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -7,12 +7,18 @@ import { Spinner } from '@/components/ui/Spinner';
 import { formatPartyId } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { MakeRedeemForm } from './MakeRedeemForm';
+import { useLedgerClient } from '@/hooks/useLedger';
+import { TemplateIds } from '@sdk/vault-api';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/lib/constants';
 
 export function RedeemRequestList() {
   const { party } = useAuth();
   const { data: redeemRequests, isLoading, error } = useRedeemRequests();
   const [showMakeRedeemForm, setShowMakeRedeemForm] = useState(false);
-  const acceptRedeem = useAcceptRedeem();
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const client = useLedgerClient();
+  const queryClient = useQueryClient();
   const declineRedeem = useDeclineRedeem();
   const cancelRedeem = useCancelRedeem();
 
@@ -56,14 +62,28 @@ export function RedeemRequestList() {
     );
   }
 
-  const handleAccept = async (contractId: string) => {
+  const handleAccept = async (contractId: string, operator: string, shareCustodian: string) => {
+    if (!client) return;
+    
+    setAcceptingId(contractId);
     try {
-      await acceptRedeem.mutateAsync({
-        contractId,
-        args: {}
-      });
+      // Accept requires both operator AND shareCustodian to authorize
+      await client.exercise(
+        TemplateIds.Vault_Redeem_RedeemRequest,
+        contractId as any,
+        'Accept',
+        {},
+        [operator, shareCustodian]  // Act as both parties
+      );
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.contracts(TemplateIds.Vault_Redeem_RedeemRequest, party || undefined) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.contracts(TemplateIds.Holding_TransferableFungible, party || undefined) });
     } catch (err) {
       console.error('Failed to accept redemption:', err);
+      alert(err instanceof Error ? err.message : 'Failed to accept redemption');
+    } finally {
+      setAcceptingId(null);
     }
   };
 
@@ -150,12 +170,12 @@ export function RedeemRequestList() {
                       <div className="font-mono text-xs">{formatPartyId(contract.payload.operator)}</div>
                     </div>
                     <div>
-                      <span className="text-gray-500">Custodian:</span>
-                      <div className="font-mono text-xs">{formatPartyId(contract.payload.custodian)}</div>
+                      <span className="text-gray-500">Share Custodian:</span>
+                      <div className="font-mono text-xs">{formatPartyId((contract.payload as any).shareCustodian || contract.payload.custodian)}</div>
                     </div>
                     <div>
-                      <span className="text-gray-500">Redeemer Account:</span>
-                      <div className="font-mono text-xs">{contract.payload.redeemerAccount.id.unpack}</div>
+                      <span className="text-gray-500">Share Account:</span>
+                      <div className="font-mono text-xs">{((contract.payload as any).shareAccount?.id?.unpack || (contract.payload as any).redeemerAccount?.id?.unpack)}</div>
                     </div>
                     <div>
                       <span className="text-gray-500">Share Holding CID:</span>
@@ -168,10 +188,14 @@ export function RedeemRequestList() {
                       <>
                         <Button
                           size="sm"
-                          onClick={() => handleAccept(contract.contractId)}
-                          disabled={acceptRedeem.isPending}
+                          onClick={() => handleAccept(
+                            contract.contractId,
+                            contract.payload.operator,
+                            (contract.payload as any).shareCustodian || contract.payload.custodian
+                          )}
+                          disabled={acceptingId === contract.contractId}
                         >
-                          {acceptRedeem.isPending ? 'Accepting...' : 'Accept'}
+                          {acceptingId === contract.contractId ? 'Accepting...' : 'Accept'}
                         </Button>
                         <Button
                           size="sm"

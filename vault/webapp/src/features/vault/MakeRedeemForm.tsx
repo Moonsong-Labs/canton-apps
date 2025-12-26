@@ -122,31 +122,49 @@ export function MakeRedeemForm({ isOpen, onClose }: MakeRedeemFormProps) {
       return;
     }
 
-    // Find the user's account for this holding's custodian
-    const holdingCustodian = selectedHolding.payload.account?.custodian;
-    const userAccount = userAccounts.find((a: any) =>
-      a.payload.custodian === holdingCustodian && a.payload.owner === party
+    // Find the share account (at Vault - where VAULT-SHARE is held)
+    const shareCustodian = selectedHolding.payload.account?.custodian;
+    const shareAccount = userAccounts.find((a: any) =>
+      a.payload.custodian === shareCustodian && a.payload.owner === party
     );
 
-    if (!userAccount) {
-      setError('No matching account found for this holding');
+    if (!shareAccount) {
+      setError('No share account found for this holding');
+      return;
+    }
+
+    // Find the LNRD account (at Bank - where LNRD will be credited)
+    // The LNRD custodian is the depositInstrument's issuer (Bank)
+    const lnrdCustodian = selectedVault.payload.depositInstrument?.issuer;
+    const lnrdAccount = userAccounts.find((a: any) =>
+      a.payload.custodian === lnrdCustodian && a.payload.owner === party
+    );
+
+    if (!lnrdAccount) {
+      setError('No LNRD (Bank) account found. You need an account at Bank to receive LNRD.');
       return;
     }
 
     try {
       await createRedeemRequest.mutateAsync({
         redeemer: party,
-        redeemerAccount: {
-          custodian: userAccount.payload.custodian,
+        shareAccount: {
+          custodian: shareAccount.payload.custodian,
           owner: party,
-          id: userAccount.payload.id
+          id: shareAccount.payload.id
+        },
+        lnrdAccount: {
+          custodian: lnrdAccount.payload.custodian,
+          owner: party,
+          id: lnrdAccount.payload.id
         },
         operator: selectedVault.payload.operator,
-        custodian: selectedVault.payload.custodian,
+        shareCustodian: shareCustodian,
+        lnrdCustodian: lnrdCustodian,
         vaultId: selectedVault.payload.vaultId,
         sharesAmount: sharesAmount,
         shareHoldingCid: selectedHolding.contractId
-      });
+      } as any);
 
       // Reset form and close
       setSelectedVaultId('');

@@ -2,6 +2,8 @@ import { NavLink } from 'react-router-dom';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: '📊' },
+  { to: '/lunar-dollar', label: 'LNRD Balance', icon: '🌙' },
+  { to: '/lunar-dollar/transfers', label: 'LNRD Transfers', icon: '💸' },
   { to: '/vault', label: 'Vault Dashboard', icon: '🏦' },
   { to: '/vault/state', label: 'Vault States', icon: '📈' },
   { to: '/vault/config', label: 'Vault Configs', icon: '⚙️' },

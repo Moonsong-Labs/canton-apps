@@ -46,12 +46,12 @@ export function VaultDashboard() {
     return acc;
   }, {} as Record<string, number>);
 
-  // Get USD (stablecoin) and VAULT-SHARE balances
-  const usdBalance = holdingsByInstrument['USD'] || 0;
+  // Get LNRD (Lunar Dollars) and VAULT-SHARE balances
+  const lnrdBalance = holdingsByInstrument['LNRD'] || 0;
   const shareBalance = holdingsByInstrument['VAULT-SHARE'] || 0;
 
-  // Calculate portfolio value (shares * avg share price + USD)
-  const portfolioValue = (shareBalance * avgSharePrice) + usdBalance;
+  // Calculate portfolio value (shares * avg share price + LNRD)
+  const portfolioValue = (shareBalance * avgSharePrice) + lnrdBalance;
 
   return (
     <div className="space-y-6">
@@ -65,9 +65,9 @@ export function VaultDashboard() {
         <h3 className="text-lg font-semibold mb-4 text-slate-200">My Portfolio</h3>
         <div className="grid gap-6 md:grid-cols-4">
           <div className="text-center p-4 bg-white/10 rounded-lg">
-            <p className="text-sm text-slate-300 mb-1">USD Balance</p>
-            <p className="text-3xl font-bold text-green-400">${usdBalance.toFixed(2)}</p>
-            <p className="text-xs text-slate-400 mt-1">Stablecoin</p>
+            <p className="text-sm text-slate-300 mb-1">LNRD Balance</p>
+            <p className="text-3xl font-bold text-green-400">🌙 {lnrdBalance.toFixed(2)}</p>
+            <p className="text-xs text-slate-400 mt-1">Lunar Dollars</p>
           </div>
           <div className="text-center p-4 bg-white/10 rounded-lg">
             <p className="text-sm text-slate-300 mb-1">Vault Shares</p>
@@ -76,13 +76,13 @@ export function VaultDashboard() {
           </div>
           <div className="text-center p-4 bg-white/10 rounded-lg">
             <p className="text-sm text-slate-300 mb-1">Share Value</p>
-            <p className="text-3xl font-bold text-blue-400">${(shareBalance * avgSharePrice).toFixed(2)}</p>
-            <p className="text-xs text-slate-400 mt-1">@ {avgSharePrice.toFixed(4)}/share</p>
+            <p className="text-3xl font-bold text-blue-400">🌙 {(shareBalance * avgSharePrice).toFixed(2)}</p>
+            <p className="text-xs text-slate-400 mt-1">@ {avgSharePrice.toFixed(4)} LNRD/share</p>
           </div>
           <div className="text-center p-4 bg-white/10 rounded-lg border-2 border-yellow-500/50">
             <p className="text-sm text-slate-300 mb-1">Total Portfolio</p>
-            <p className="text-3xl font-bold text-yellow-400">${portfolioValue.toFixed(2)}</p>
-            <p className="text-xs text-slate-400 mt-1">USD + Share Value</p>
+            <p className="text-3xl font-bold text-yellow-400">🌙 {portfolioValue.toFixed(2)}</p>
+            <p className="text-xs text-slate-400 mt-1">LNRD + Share Value</p>
           </div>
         </div>
         {Object.keys(holdingsByInstrument).length > 2 && (
@@ -90,7 +90,7 @@ export function VaultDashboard() {
             <p className="text-sm text-slate-300 mb-2">Other Holdings:</p>
             <div className="flex flex-wrap gap-2">
               {Object.entries(holdingsByInstrument)
-                .filter(([id]) => id !== 'USD' && id !== 'VAULT-SHARE')
+                .filter(([id]) => id !== 'LNRD' && id !== 'VAULT-SHARE')
                 .map(([id, amount]) => (
                   <Badge key={id} variant="default" className="bg-white/20 text-white">
                     {id}: {amount.toFixed(2)}
@@ -115,7 +115,7 @@ export function VaultDashboard() {
         <Card className="bg-gradient-to-br from-green-50 to-green-100">
           <div>
             <p className="text-sm text-gray-600">Total Assets</p>
-            <p className="text-3xl font-bold text-green-600 mt-1">{totalAssets.toFixed(2)} <span className="text-lg text-gray-600">USD</span></p>
+            <p className="text-3xl font-bold text-green-600 mt-1">{totalAssets.toFixed(2)} <span className="text-lg text-gray-600">LNRD</span></p>
           </div>
           <p className="text-xs text-gray-500 mt-4">Across all vaults</p>
         </Card>
@@ -131,7 +131,7 @@ export function VaultDashboard() {
         <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100">
           <div>
             <p className="text-sm text-gray-600">Avg Share Price</p>
-            <p className="text-3xl font-bold text-indigo-600 mt-1">{avgSharePrice.toFixed(4)} <span className="text-lg text-gray-600">USD</span></p>
+            <p className="text-3xl font-bold text-indigo-600 mt-1">{avgSharePrice.toFixed(4)} <span className="text-lg text-gray-600">LNRD</span></p>
           </div>
           <p className="text-xs text-gray-500 mt-4">Average across vaults</p>
         </Card>

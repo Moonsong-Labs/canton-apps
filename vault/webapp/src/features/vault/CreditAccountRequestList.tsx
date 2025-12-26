@@ -36,6 +36,39 @@ export function CreditAccountRequestList() {
   const [holdingStandard, setHoldingStandard] = useState('TransferableFungible');
   const [amount, setAmount] = useState('');
 
+  // Get unique custodians/issuers from accounts for instrument presets
+  const knownParties = useMemo(() => {
+    if (!accounts) return { bank: '', vault: '' };
+    const parties: { bank: string; vault: string } = { bank: '', vault: '' };
+    accounts.forEach((a: any) => {
+      const custodianName = a.payload.custodian?.split('::')[0] || '';
+      if (custodianName === 'Bank' && !parties.bank) {
+        parties.bank = a.payload.custodian;
+      } else if (custodianName === 'Vault' && !parties.vault) {
+        parties.vault = a.payload.custodian;
+      }
+    });
+    return parties;
+  }, [accounts]);
+
+  // Auto-fill instrument details based on preset selection
+  const handleInstrumentPreset = (preset: 'LNRD' | 'custom') => {
+    if (preset === 'LNRD' && knownParties.bank) {
+      setInstrumentDepository(knownParties.bank);
+      setInstrumentIssuer(knownParties.bank);
+      setInstrumentId('LNRD');
+      setInstrumentVersion('0');
+      setHoldingStandard('TransferableFungible');
+    } else {
+      // Custom - clear fields
+      setInstrumentDepository('');
+      setInstrumentIssuer('');
+      setInstrumentId('');
+      setInstrumentVersion('0');
+      setHoldingStandard('TransferableFungible');
+    }
+  };
+
   const userAccounts = useMemo(() => {
     if (!accounts || !party) return [];
     return accounts.filter((a: any) => a.payload.owner === party);
@@ -166,6 +199,35 @@ export function CreditAccountRequestList() {
               onChange={(e) => setSelectedAccountId(e.target.value)}
               disabled={loadingAccounts}
             />
+            
+            {/* Instrument Selection - LNRD only */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Instrument</label>
+              <div className="flex gap-2 flex-wrap">
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant={instrumentId === 'LNRD' ? 'primary' : 'secondary'}
+                  onClick={() => handleInstrumentPreset('LNRD')}
+                  disabled={!knownParties.bank}
+                  title={knownParties.bank ? 'Lunar Dollars (Bank)' : 'Bank party not found - run setup'}
+                >
+                  🌙 LNRD (Lunar Dollars)
+                </Button>
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant="ghost"
+                  onClick={() => handleInstrumentPreset('custom')}
+                >
+                  ✏️ Custom
+                </Button>
+              </div>
+              {!knownParties.bank && (
+                <p className="text-xs text-amber-400 mt-1">Bank party not found. Make sure lunar-dollar setup has run.</p>
+              )}
+            </div>
+
             <Input
               label="Instrument Depository"
               value={instrumentDepository}
@@ -329,6 +391,35 @@ export function CreditAccountRequestList() {
             onChange={(e) => setSelectedAccountId(e.target.value)}
             disabled={loadingAccounts}
           />
+          
+          {/* Instrument Selection - LNRD only */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Instrument</label>
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                type="button" 
+                size="sm" 
+                variant={instrumentId === 'LNRD' ? 'primary' : 'secondary'}
+                onClick={() => handleInstrumentPreset('LNRD')}
+                disabled={!knownParties.bank}
+                title={knownParties.bank ? 'Lunar Dollars (Bank)' : 'Bank party not found - run setup'}
+              >
+                🌙 LNRD (Lunar Dollars)
+              </Button>
+              <Button 
+                type="button" 
+                size="sm" 
+                variant="ghost"
+                onClick={() => handleInstrumentPreset('custom')}
+              >
+                ✏️ Custom
+              </Button>
+            </div>
+            {!knownParties.bank && (
+              <p className="text-xs text-amber-400 mt-1">Bank party not found. Make sure lunar-dollar setup has run.</p>
+            )}
+          </div>
+
           <Input
             label="Instrument Depository"
             value={instrumentDepository}
