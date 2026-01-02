@@ -20,6 +20,7 @@ import Compliance.Registry (ComplianceRegistry(..))
 import Compliance.Reference (ComplianceReference(..))
 import Compliance.Validator (TransferValidator)
 import Compliance.Validators.Blacklist (BlacklistValidator(..))
+import Compliance.Validators.Claims (ClaimsValidator(..))
 
 setup = script do
   [bank, alice, bob, public, vault] <- mapA getOrCreateParty ["Bank", "Alice", "Bob", "Public", "Vault"]
@@ -49,12 +50,19 @@ setup = script do
       operator = bank
       blacklistedParties = Set.empty
   
+  claimsValidatorCid <- submit bank do
+    createCmd ClaimsValidator with
+      operator = bank
+      requiredSenderClaims = Set.empty
+      requiredReceiverClaims = Set.empty
+
   let blacklistInterfaceCid = toInterfaceContractId @TransferValidator blacklistValidatorCid
+  let claimsInterfaceCid = toInterfaceContractId @TransferValidator claimsValidatorCid
 
   complianceRegistryCid <- submit bank do
     createCmd ComplianceRegistry with
       operator = bank
-      activeValidators = [blacklistInterfaceCid]
+      activeValidators = [blacklistInterfaceCid, claimsInterfaceCid]
 
   submit bank do
     createCmd ComplianceReference with
@@ -62,7 +70,7 @@ setup = script do
       publicParty = public
       complianceRegistryCid
 
-  debug $ "Created compliance registry with blacklist validator and public reference"
+  debug $ "Created compliance registry with blacklist and claims validators"
 
   let
     instrumentId = Id "LNRD"
