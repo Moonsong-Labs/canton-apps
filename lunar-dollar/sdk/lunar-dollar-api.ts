@@ -148,6 +148,8 @@ export const TemplateIds = {
   Compliance_Reference_ComplianceReference: 'lunar-dollar:Compliance.Reference:ComplianceReference',
   Compliance_Registry_ComplianceRegistry: 'lunar-dollar:Compliance.Registry:ComplianceRegistry',
   Compliance_Validators_Blacklist_BlacklistValidator: 'lunar-dollar:Compliance.Validators.Blacklist:BlacklistValidator',
+  Compliance_Validators_Claims_ClaimsValidator: 'lunar-dollar:Compliance.Validators.Claims:ClaimsValidator',
+  Compliance_Identity_Identity: 'lunar-dollar:Compliance.Identity:Identity',
   LunarDollar: 'lunar-dollar:LunarDollar:LunarDollar',
   PaymentReceiver: 'lunar-dollar:PaymentReceiver:PaymentReceiver',
   PaymentReceiver_AccessGrant: 'lunar-dollar:PaymentReceiver:AccessGrant',
@@ -2915,6 +2917,147 @@ export namespace Compliance_Validators_Blacklist_BlacklistValidator {
     return {
       templateId: TemplateIds.Compliance_Validators_Blacklist_BlacklistValidator,
       choice: 'UpdateBlacklist',
+      contractId: contractId as string,
+      argument: args
+    };
+  }
+}
+
+/**
+ * Compliance_Claims
+ * Types for ERC-3643 style claims
+ */
+export namespace Compliance_Claims {
+  export type ClaimTopic = 'KYC' | 'AML' | 'ACCREDITED_INVESTOR' | 'QUALIFIED_PURCHASER' | 'INSTITUTIONAL';
+  
+  export const ClaimTopics: ClaimTopic[] = ['KYC', 'AML', 'ACCREDITED_INVESTOR', 'QUALIFIED_PURCHASER', 'INSTITUTIONAL'];
+
+  export interface Claim {
+    topic: ClaimTopic;
+    issuer: Party;
+    subject: Party;
+    data_: string;
+    issuedAt: Time;
+  }
+}
+
+/**
+ * Compliance_Identity_Identity
+ * Role: state
+ * Template ID: lunar-dollar:Compliance.Identity:Identity
+ * Choices: AddClaim, RevokeClaim, HasClaim, GetClaim
+ *
+ * @example
+ * const cmd = Compliance_Identity_Identity.create({ operator: 'alice::1220...', subject: 'bob::1220...', claims: {} });
+ * const contractId = await ledger.create(cmd.templateId, cmd.argument);
+ */
+export namespace Compliance_Identity_Identity {
+
+  export interface Payload {
+    operator: Party;
+    subject: Party;
+    claims: DamlMap<Compliance_Claims.ClaimTopic, Compliance_Claims.Claim>;
+  }
+
+  export function create(payload: Payload): Command<Payload> {
+    return {
+      templateId: TemplateIds.Compliance_Identity_Identity,
+      argument: payload
+    };
+  }
+
+  export function addClaim(
+    contractId: ContractId<Payload>,
+    args: {
+      claim: Compliance_Claims.Claim;
+    }
+  ): Command<ContractId<Payload>> {
+    return {
+      templateId: TemplateIds.Compliance_Identity_Identity,
+      choice: 'AddClaim',
+      contractId: contractId as string,
+      argument: args
+    };
+  }
+
+  export function revokeClaim(
+    contractId: ContractId<Payload>,
+    args: {
+      topic: Compliance_Claims.ClaimTopic;
+    }
+  ): Command<ContractId<Payload>> {
+    return {
+      templateId: TemplateIds.Compliance_Identity_Identity,
+      choice: 'RevokeClaim',
+      contractId: contractId as string,
+      argument: args
+    };
+  }
+
+  export function hasClaim(
+    contractId: ContractId<Payload>,
+    args: {
+      topic: Compliance_Claims.ClaimTopic;
+    }
+  ): Command<boolean> {
+    return {
+      templateId: TemplateIds.Compliance_Identity_Identity,
+      choice: 'HasClaim',
+      contractId: contractId as string,
+      argument: args
+    };
+  }
+
+  export function getClaim(
+    contractId: ContractId<Payload>,
+    args: {
+      topic: Compliance_Claims.ClaimTopic;
+    }
+  ): Command<Optional<Compliance_Claims.Claim>> {
+    return {
+      templateId: TemplateIds.Compliance_Identity_Identity,
+      choice: 'GetClaim',
+      contractId: contractId as string,
+      argument: args
+    };
+  }
+}
+
+/**
+ * Compliance_Validators_Claims_ClaimsValidator
+ * Role: state
+ * Template ID: lunar-dollar:Compliance.Validators.Claims:ClaimsValidator
+ * Choices: UpdateRequiredClaims
+ *
+ * @example
+ * const cmd = Compliance_Validators_Claims_ClaimsValidator.create({ operator: 'alice::1220...', requiredSenderClaims: [], requiredReceiverClaims: [] });
+ * const contractId = await ledger.create(cmd.templateId, cmd.argument);
+ */
+export namespace Compliance_Validators_Claims_ClaimsValidator {
+
+  export interface Payload {
+    operator: Party;
+    requiredSenderClaims: Compliance_Claims.ClaimTopic[];
+    requiredReceiverClaims: Compliance_Claims.ClaimTopic[];
+  }
+
+  export function create(payload: Payload): Command<Payload> {
+    return {
+      templateId: TemplateIds.Compliance_Validators_Claims_ClaimsValidator,
+      argument: payload
+    };
+  }
+
+  export function updateRequiredClaims(
+    contractId: ContractId<Payload>,
+    args: {
+      newSenderClaims: Compliance_Claims.ClaimTopic[];
+      newReceiverClaims: Compliance_Claims.ClaimTopic[];
+    }
+  ): Command<ContractId<Payload>> {
+    return {
+      templateId: TemplateIds.Compliance_Validators_Claims_ClaimsValidator,
+      choice: 'UpdateRequiredClaims',
       contractId: contractId as string,
       argument: args
     };
