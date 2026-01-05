@@ -22,7 +22,7 @@ This project uses a **Dev Container** with Daml SDK and Bun pre-installed.
 
 1. Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 2. Open the repository folder
-3. Click "Reopen in Container" when prompted (or run `Dev Containers: Reopen in Container` from the command palette)
+3. Click "Reopen in Container" when prompted, and select the **stable** configuration (or run `Dev Containers: Reopen in Container` from the command palette)
 
 ### 1. Setup
 
