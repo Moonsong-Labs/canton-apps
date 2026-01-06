@@ -45,16 +45,24 @@ function shortenParty(party: string): string {
   return party.length > 20 ? `${party.slice(0, 8)}...${party.slice(-8)}` : party;
 }
 
-function extractClaimsFromSet(rawClaims: unknown): string[] {
-  if (!rawClaims) return [];
-  if (Array.isArray(rawClaims)) return rawClaims;
-  if (typeof rawClaims === 'object') {
-    const obj = rawClaims as Record<string, unknown>;
+function extractFromDamlSet(rawSet: unknown): string[] {
+  if (!rawSet) return [];
+  if (Array.isArray(rawSet)) {
+    if (rawSet.length > 0 && Array.isArray(rawSet[0])) {
+      return rawSet.map(tuple => String(tuple[0]));
+    }
+    return rawSet.map(String);
+  }
+  if (typeof rawSet === 'object') {
+    const obj = rawSet as Record<string, unknown>;
     if ('map' in obj && Array.isArray(obj.map)) {
       return (obj.map as Array<[string, unknown]>).map(tuple => String(tuple[0]));
     }
     if ('map' in obj && obj.map && typeof obj.map === 'object') {
       return Object.keys(obj.map as object);
+    }
+    if ('textMap' in obj && obj.textMap && typeof obj.textMap === 'object') {
+      return Object.keys(obj.textMap as object);
     }
   }
   return [];
@@ -233,7 +241,7 @@ export function ComplianceDashboard() {
                           Operator: {shortenParty(validator.payload.operator)}
                         </p>
                         <p className="text-sm text-red-400">
-                          {validator.payload.blacklistedParties?.length || 0} blocked {validator.payload.blacklistedParties?.length === 1 ? 'party' : 'parties'}
+                          {extractFromDamlSet(validator.payload.blacklistedParties).length} blocked {extractFromDamlSet(validator.payload.blacklistedParties).length === 1 ? 'party' : 'parties'}
                         </p>
                       </div>
                       <Link
@@ -266,8 +274,8 @@ export function ComplianceDashboard() {
             ) : (
               <div className="space-y-3">
                 {claimsValidatorList.map((validator) => {
-                  const senderClaims = extractClaimsFromSet(validator.payload.requiredSenderClaims);
-                  const receiverClaims = extractClaimsFromSet(validator.payload.requiredReceiverClaims);
+                  const senderClaims = extractFromDamlSet(validator.payload.requiredSenderClaims);
+                  const receiverClaims = extractFromDamlSet(validator.payload.requiredReceiverClaims);
                   const totalRequired = senderClaims.length + receiverClaims.length;
 
                   return (
