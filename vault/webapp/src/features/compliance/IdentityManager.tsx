@@ -45,9 +45,20 @@ function shortenParty(party: string): string {
 
 function extractClaimsFromMap(claims: unknown): { topic: Compliance_Claims.ClaimTopic; claim: Compliance_Claims.Claim }[] {
   if (!claims) return [];
-  if (typeof claims !== 'object') return [];
 
   const result: { topic: Compliance_Claims.ClaimTopic; claim: Compliance_Claims.Claim }[] = [];
+
+  if (Array.isArray(claims)) {
+    for (const tuple of claims as Array<[string, Compliance_Claims.Claim]>) {
+      if (Array.isArray(tuple) && tuple.length >= 2) {
+        result.push({ topic: tuple[0] as Compliance_Claims.ClaimTopic, claim: tuple[1] });
+      }
+    }
+    return result;
+  }
+
+  if (typeof claims !== 'object') return [];
+
   const obj = claims as Record<string, unknown>;
 
   if ('map' in obj && Array.isArray(obj.map)) {
@@ -58,6 +69,10 @@ function extractClaimsFromMap(claims: unknown): { topic: Compliance_Claims.Claim
     }
   } else if ('map' in obj && obj.map && typeof obj.map === 'object') {
     for (const [topic, claim] of Object.entries(obj.map as object)) {
+      result.push({ topic: topic as Compliance_Claims.ClaimTopic, claim: claim as Compliance_Claims.Claim });
+    }
+  } else if ('textMap' in obj && obj.textMap && typeof obj.textMap === 'object') {
+    for (const [topic, claim] of Object.entries(obj.textMap as object)) {
       result.push({ topic: topic as Compliance_Claims.ClaimTopic, claim: claim as Compliance_Claims.Claim });
     }
   }

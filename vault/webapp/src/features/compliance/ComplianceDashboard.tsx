@@ -339,12 +339,18 @@ export function ComplianceDashboard() {
                 {identityList.slice(0, 6).map((identity) => {
                   const claims = identity.payload.claims as unknown;
                   let claimCount = 0;
-                  if (claims && typeof claims === 'object') {
-                    const claimsObj = claims as Record<string, unknown>;
-                    if ('map' in claimsObj && Array.isArray(claimsObj.map)) {
-                      claimCount = (claimsObj.map as unknown[]).length;
-                    } else if ('map' in claimsObj && claimsObj.map && typeof claimsObj.map === 'object') {
-                      claimCount = Object.keys(claimsObj.map as object).length;
+                  if (claims) {
+                    if (Array.isArray(claims)) {
+                      claimCount = claims.length;
+                    } else if (typeof claims === 'object') {
+                      const claimsObj = claims as Record<string, unknown>;
+                      if ('map' in claimsObj && Array.isArray(claimsObj.map)) {
+                        claimCount = (claimsObj.map as unknown[]).length;
+                      } else if ('map' in claimsObj && claimsObj.map && typeof claimsObj.map === 'object') {
+                        claimCount = Object.keys(claimsObj.map as object).length;
+                      } else if ('textMap' in claimsObj && claimsObj.textMap && typeof claimsObj.textMap === 'object') {
+                        claimCount = Object.keys(claimsObj.textMap as object).length;
+                      }
                     }
                   }
 
