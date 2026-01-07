@@ -1,0 +1,36 @@
+module Holding.Transfer where
+
+import DA.List (head)
+import DA.Set qualified as Set
+
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+import Daml.Finance.Interface.Holding.V4.Transferable qualified as Transferable (Transfer(..), I)
+import Daml.Finance.Interface.Holding.V4.Fungible qualified as Fungible (I, Split(..))
+import Daml.Finance.Interface.Holding.V4.Util (getAmount)
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey)
+
+splitHolding : Decimal -> ContractId Holding.I -> Update (ContractId Holding.I)
+splitHolding amount holdingCid = do
+  holding <- fetch holdingCid
+  let holdingAmount = getAmount holding
+  assertMsg "Holding amount less than requested amount" (holdingAmount >= amount)
+
+  if holdingAmount > amount then do
+    let fungibleCid = coerceInterfaceContractId @Fungible.I holdingCid
+    splitResult <- exercise fungibleCid Fungible.Split with
+      amounts = [amount, holdingAmount - amount]
+    pure $ toInterfaceContractId @Holding.I (head splitResult.splitCids)
+  else
+    pure holdingCid
+
+splitAndTransfer : [Party] -> AccountKey -> Decimal -> ContractId Holding.I -> Update (ContractId Holding.I)
+splitAndTransfer actors targetAccount amount holdingCid = do
+  holdingToTransfer <- splitHolding amount holdingCid
+
+  let transferableCid = coerceInterfaceContractId @Transferable.I holdingToTransfer
+  newTransferableCid <- exercise transferableCid Transferable.Transfer with
+    actors = Set.fromList actors
+    newOwnerAccount = targetAccount
+
+  pure $ toInterfaceContractId @Holding.I newTransferableCid
+

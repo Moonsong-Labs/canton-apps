@@ -8,6 +8,7 @@ import Daml.Finance.Interface.Account.V4.Account qualified as Account (Credit(..
 import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
 import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey, Id)
 import Daml.Finance.Interface.Util.V3.Common (qty)
+import Holding.Transfer (splitHolding)
 
 template RedeemRequest
   with
@@ -29,15 +30,15 @@ template RedeemRequest
     choice Accept : (ContractId VaultState, ContractId Holding.I)
       controller operator, shareCustodian
       do
-        -- Fetch vault configuration
         (_, vaultConfig) <- fetchByKey @VaultConfig (operator, vaultId)
 
-        -- Step 1: Burn shares from share account (at Vault)
+        holdingToDebit <- splitHolding sharesAmount shareHoldingCid
+
         Account.exerciseInterfaceByKey @Account.I
           shareAccount
           shareCustodian
           Account.Debit with
-            holdingCid = shareHoldingCid
+            holdingCid = holdingToDebit
 
         -- Step 2: Process redemption - calculates redemption amount based on share price
         (stateCid, _) <- fetchByKey @VaultState (operator, vaultId)

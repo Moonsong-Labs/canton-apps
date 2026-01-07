@@ -1,17 +1,14 @@
 module TransferRequest where
 
 import DA.Assert ((===))
-import DA.List (head)
 import DA.Optional (fromOptional)
-import DA.Set (fromList)
 
 import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
-import Daml.Finance.Interface.Holding.V4.Transferable qualified as Transferable (Transfer(..), I)
-import Daml.Finance.Interface.Holding.V4.Fungible qualified as Fungible (I, Split(..))
 import Daml.Finance.Interface.Holding.V4.Util (getAmount, getInstrument)
 import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), InstrumentKey(..))
 
 import Compliance.Registry (ComplianceRegistry, ValidateTransfer(..))
+import Holding.Transfer (splitAndTransfer)
 
 template TransferRequest
   with
@@ -30,7 +27,6 @@ template TransferRequest
         holdingCid : ContractId Holding.I
       controller currentOwner, instrument.issuer
       do
-        -- Look up registry by key (always gets the current version)
         (registryCid, _) <- fetchByKey @ComplianceRegistry instrument.issuer
         
         results <- exercise registryCid ValidateTransfer with
@@ -48,22 +44,7 @@ template TransferRequest
         assert(holdingAmount >= amount)
         getInstrument holding === instrument
 
-        holdingToTransfer <- if holdingAmount > amount then do
-          let fungibleCid = coerceInterfaceContractId @Fungible.I holdingCid
-          splitResult <- exercise fungibleCid Fungible.Split with
-            amounts = [amount, holdingAmount - amount]
-          splitResult.rest === None
-          pure $ toInterfaceContractId @Holding.I (head splitResult.splitCids)
-        else
-          pure holdingCid
-
-        let transferableCid = coerceInterfaceContractId @Transferable.I holdingToTransfer
-
-        newTransferableCid <- exercise transferableCid Transferable.Transfer with
-          actors = fromList [currentOwner, receiverAccount.owner]
-          newOwnerAccount = receiverAccount
-
-        pure $ toInterfaceContractId @Holding.I newTransferableCid
+        splitAndTransfer [currentOwner, receiverAccount.owner] receiverAccount amount holdingCid
 
     choice Decline : ()
       controller currentOwner

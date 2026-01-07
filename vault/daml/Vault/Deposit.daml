@@ -1,15 +1,13 @@
 module Vault.Deposit where
 
-import DA.Set (fromList)
-
 import Vault.Config (VaultConfig)
 import Vault.State (VaultState, ProcessDeposit(..))
 
 import Daml.Finance.Interface.Account.V4.Account qualified as Account (Credit(..), I, exerciseInterfaceByKey)
 import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
-import Daml.Finance.Interface.Holding.V4.Transferable qualified as Transferable (Transfer(..), I)
 import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey, Id)
 import Daml.Finance.Interface.Util.V3.Common (qty)
+import Holding.Transfer (splitAndTransfer)
 
 template DepositRequest
   with
@@ -31,14 +29,9 @@ template DepositRequest
       do
         (_, vaultConfig) <- fetchByKey @VaultConfig (operator, vaultId)
 
-        -- Check that amount is more than the minimum deposit amount
         assertMsg "Deposit amount below minimum" (amount >= vaultConfig.minDepositAmount)
 
-        -- Step 1: Transfer deposited funds to treasury account
-        let transferableCid = coerceInterfaceContractId @Transferable.I depositHoldingCid
-        _treasuryHoldingCid <- exercise transferableCid Transferable.Transfer with
-          actors = fromList [depositor, custodian, operator]
-          newOwnerAccount = vaultConfig.treasuryAccount
+        _ <- splitAndTransfer [depositor, custodian, operator] vaultConfig.treasuryAccount amount depositHoldingCid
 
         -- Step 2: Process deposit and get amount of shares to mint      
         (stateCid, _) <- fetchByKey @VaultState (operator, vaultId)
