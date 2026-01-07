@@ -100,6 +100,181 @@ export function ComplianceDashboard() {
 
   const isLoading = loadingRegistries || loadingBlacklist || loadingClaims || loadingIdentities || loadingLNRD;
 
+  const isAdmin = party && (
+    registryList.some(r => r.payload.operator === party) ||
+    blacklistList.some(v => v.payload.operator === party) ||
+    claimsValidatorList.some(v => v.payload.operator === party) ||
+    lunarDollar?.payload.instrumentKey?.issuer === party
+  );
+
+  const myIdentity = identityList.find(i => i.payload.subject === party);
+
+  const getClaimsFromIdentity = (identity: IdentityContract) => {
+    const claims = identity.payload.claims as unknown;
+    const result: Array<{ topic: string; issuer: string; data: string; issuedAt: string }> = [];
+    
+    if (!claims) return result;
+    
+    let claimEntries: Array<[string, unknown]> = [];
+    if (Array.isArray(claims)) {
+      claimEntries = claims as Array<[string, unknown]>;
+    } else if (typeof claims === 'object') {
+      const claimsObj = claims as Record<string, unknown>;
+      if ('map' in claimsObj && Array.isArray(claimsObj.map)) {
+        claimEntries = claimsObj.map as Array<[string, unknown]>;
+      }
+    }
+    
+    for (const [topic, claimData] of claimEntries) {
+      const claim = claimData as Record<string, unknown>;
+      result.push({
+        topic: String(topic),
+        issuer: shortenParty(String(claim.issuer || '')),
+        data: String(claim.data_ || ''),
+        issuedAt: String(claim.issuedAt || ''),
+      });
+    }
+    
+    return result;
+  };
+
+  const getRequiredClaims = () => {
+    const required = new Set<string>();
+    for (const validator of claimsValidatorList) {
+      for (const claim of extractFromDamlSet(validator.payload.requiredSenderClaims)) {
+        required.add(claim);
+      }
+      for (const claim of extractFromDamlSet(validator.payload.requiredReceiverClaims)) {
+        required.add(claim);
+      }
+    }
+    return Array.from(required);
+  };
+
+  if (!isAdmin) {
+    const myClaims = myIdentity ? getClaimsFromIdentity(myIdentity) : [];
+    const requiredClaims = getRequiredClaims();
+    const myClaimTopics = new Set(myClaims.map(c => c.topic));
+    const missingClaims = requiredClaims.filter(c => !myClaimTopics.has(c));
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-100">My Compliance Status</h2>
+          <p className="text-slate-400">View your identity and claims for LNRD transfers</p>
+        </div>
+
+        <Card>
+          <h3 className="text-sm font-medium text-slate-400 mb-2">Current Party</h3>
+          {party && <PartyBadge party={party} />}
+        </Card>
+
+        {isLoading ? (
+          <Card>
+            <div className="flex items-center justify-center py-8">
+              <Spinner />
+              <span className="ml-3 text-slate-400">Loading compliance data...</span>
+            </div>
+          </Card>
+        ) : (
+          <>
+            <Card className={myIdentity ? "border-emerald-700/50" : "border-amber-700/50"}>
+              <div className="flex items-center gap-4 mb-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${myIdentity ? 'bg-emerald-600/20' : 'bg-amber-600/20'}`}>
+                  <span className="text-2xl">{myIdentity ? '✓' : '!'}</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-200">
+                    {myIdentity ? 'Identity Verified' : 'No Identity Found'}
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    {myIdentity 
+                      ? 'You have an on-chain identity that can hold claims'
+                      : 'Contact the issuer to create your identity'}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {requiredClaims.length > 0 && (
+              <Card>
+                <h3 className="text-lg font-semibold text-slate-200 mb-4">Required Claims for Transfers</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {requiredClaims.map(claim => {
+                    const hasClaim = myClaimTopics.has(claim);
+                    return (
+                      <div 
+                        key={claim}
+                        className={`p-3 rounded-lg border ${hasClaim ? 'bg-emerald-900/20 border-emerald-700/50' : 'bg-red-900/20 border-red-700/50'}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{hasClaim ? '✓' : '✗'}</span>
+                          <span className={`font-medium ${hasClaim ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {claim}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {hasClaim ? 'Verified' : 'Missing - contact issuer'}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+                {missingClaims.length > 0 && (
+                  <p className="mt-4 text-sm text-amber-400">
+                    ⚠️ You are missing {missingClaims.length} required claim(s). Transfers may be blocked until you obtain them.
+                  </p>
+                )}
+                {missingClaims.length === 0 && (
+                  <p className="mt-4 text-sm text-emerald-400">
+                    ✓ You have all required claims for transfers.
+                  </p>
+                )}
+              </Card>
+            )}
+
+            {myClaims.length > 0 && (
+              <Card>
+                <h3 className="text-lg font-semibold text-slate-200 mb-4">My Claims</h3>
+                <div className="space-y-3">
+                  {myClaims.map((claim, idx) => (
+                    <div key={idx} className="p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-cyan-600/20 flex items-center justify-center">
+                          <span className="text-xl">📜</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-cyan-400">{claim.topic}</p>
+                          <p className="text-sm text-slate-400">Issued by: {claim.issuer}</p>
+                          {claim.data && <p className="text-xs text-slate-500">Data: {claim.data}</p>}
+                        </div>
+                        <div className="px-3 py-1 bg-emerald-900/30 text-emerald-400 rounded text-sm">
+                          Active
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {!myIdentity && (
+              <Card className="bg-slate-800/50 border-slate-600">
+                <h3 className="text-lg font-semibold text-slate-300 mb-2">ℹ️ How to Get Claims</h3>
+                <div className="text-sm text-slate-400 space-y-2">
+                  <p>1. Contact the LNRD issuer (Bank) to request an identity</p>
+                  <p>2. Complete any required verification (KYC, AML, etc.)</p>
+                  <p>3. The issuer will add verified claims to your identity</p>
+                  <p>4. Once you have the required claims, you can transfer LNRD</p>
+                </div>
+              </Card>
+            )}
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
