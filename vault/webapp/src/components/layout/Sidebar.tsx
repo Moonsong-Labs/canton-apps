@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useContractQuery } from '@/hooks/useLedger';
-import { TemplateIds, Compliance_Identity_Identity } from '@lunar-dollar/lunar-dollar-api';
 
 interface NavItem {
   to: string;
@@ -17,9 +15,13 @@ interface NavGroup {
   defaultOpen?: boolean;
 }
 
-interface IdentityContract {
-  contractId: string;
-  payload: Compliance_Identity_Identity.Payload;
+function shortenParty(party: string): string {
+  if (typeof party !== 'string') return String(party);
+  if (party.includes('::')) {
+    const [name] = party.split('::');
+    return name;
+  }
+  return party.length > 20 ? `${party.slice(0, 8)}...${party.slice(-8)}` : party;
 }
 
 function NavGroupComponent({ group }: { group: NavGroup }) {
@@ -33,10 +35,9 @@ function NavGroupComponent({ group }: { group: NavGroup }) {
       <NavLink
         to={item.to}
         className={({ isActive }) =>
-          `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-            isActive
-              ? 'bg-blue-600 text-white'
-              : 'text-slate-400 hover:bg-slate-700/30 hover:text-slate-200'
+          `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive
+            ? 'bg-blue-600 text-white'
+            : 'text-slate-400 hover:bg-slate-700/30 hover:text-slate-200'
           }`
         }
       >
@@ -50,11 +51,10 @@ function NavGroupComponent({ group }: { group: NavGroup }) {
     <div className="mb-1">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-          isGroupActive
-            ? 'bg-slate-700/50 text-white'
-            : 'text-slate-400 hover:bg-slate-700/30 hover:text-slate-200'
-        }`}
+        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${isGroupActive
+          ? 'bg-slate-700/50 text-white'
+          : 'text-slate-400 hover:bg-slate-700/30 hover:text-slate-200'
+          }`}
       >
         <div className="flex items-center gap-3">
           <span>{group.icon}</span>
@@ -64,7 +64,7 @@ function NavGroupComponent({ group }: { group: NavGroup }) {
           ▼
         </span>
       </button>
-      
+
       <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
         <div className="pl-4 mt-1 space-y-0.5">
           {group.items.map((item) => (
@@ -73,10 +73,9 @@ function NavGroupComponent({ group }: { group: NavGroup }) {
               to={item.to}
               end={item.to === '/vault' || item.to === '/lunar-dollar' || item.to === '/compliance'}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-1.5 rounded-lg transition-colors text-sm ${
-                  isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-slate-300 hover:bg-slate-700'
+                `flex items-center gap-3 px-3 py-1.5 rounded-lg transition-colors text-sm ${isActive
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-300 hover:bg-slate-700'
                 }`
               }
             >
@@ -92,13 +91,9 @@ function NavGroupComponent({ group }: { group: NavGroup }) {
 
 export function Sidebar() {
   const { party } = useAuth();
-  
-  const { data: identities } = useContractQuery<Compliance_Identity_Identity.Payload>(
-    TemplateIds.Compliance_Identity_Identity
-  );
 
-  const identityList = (identities as IdentityContract[]) || [];
-  const isAdmin = party && identityList.some(i => i.payload.operator === party);
+  const partyName = party ? shortenParty(party).toLowerCase() : '';
+  const isBank = partyName === 'bank';
 
   const baseGroups: NavGroup[] = [
     {
@@ -138,22 +133,13 @@ export function Sidebar() {
     },
   ];
 
-  const complianceGroup: NavGroup = isAdmin
-    ? {
-        label: 'Compliance',
-        icon: '🛡️',
-        items: [
-          { to: '/compliance', label: 'Dashboard', icon: '📋' },
-          { to: '/compliance/identities', label: 'Identities', icon: '🪪' },
-        ],
-      }
-    : {
-        label: 'Compliance',
-        icon: '🛡️',
-        items: [
-          { to: '/compliance/identities', label: 'My Compliance', icon: '🛡️' },
-        ],
-      };
+  const complianceGroup: NavGroup = {
+    label: isBank ? 'Compliance' : 'My Identity',
+    icon: '🛡️',
+    items: [
+      { to: isBank ? '/compliance' : '/compliance/identities', label: isBank ? 'Compliance Management' : 'My Identity', icon: '🛡️' },
+    ],
+  };
 
   const debugGroup: NavGroup = {
     label: 'Debug',

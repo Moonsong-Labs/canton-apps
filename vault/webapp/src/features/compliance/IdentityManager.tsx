@@ -99,8 +99,15 @@ export function IdentityManager() {
 
   const identityList = (identities as IdentityContract[]) || [];
 
-  const isAdmin = party && identityList.some(i => i.payload.operator === party);
+  const partyName = party ? shortenParty(party).toLowerCase() : '';
+  const isBank = partyName === 'bank';
+  const isOperator = party && identityList.some(i => i.payload.operator === party);
+  const isAdmin = isBank || isOperator;
   const myIdentity = identityList.find(i => i.payload.subject === party);
+
+  const managedIdentities = isBank
+    ? identityList.filter(i => i.payload.subject !== party)
+    : identityList;
 
   const resolvePartyId = async (partyName: string): Promise<string | null> => {
     if (!client) return null;
@@ -242,14 +249,9 @@ export function IdentityManager() {
 
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/compliance')}>
-            ← Back
-          </Button>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-100">My Identity</h2>
-            <p className="text-slate-400">View your on-chain identity and claims</p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold text-slate-100">My Identity</h2>
+          <p className="text-slate-400">View your on-chain identity and claims</p>
         </div>
 
         <Card>
@@ -371,13 +373,13 @@ export function IdentityManager() {
           {party && <PartyBadge party={party} />}
         </Card>
         <Card className="bg-gradient-to-br from-emerald-900/30 to-teal-900/30 border-emerald-700/50">
-          <h3 className="text-sm font-medium text-slate-400 mb-2">Total Identities</h3>
-          <p className="text-2xl font-bold text-white">{identityList.length}</p>
+          <h3 className="text-sm font-medium text-slate-400 mb-2">Managed Identities</h3>
+          <p className="text-2xl font-bold text-white">{managedIdentities.length}</p>
         </Card>
         <Card className="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 border-cyan-700/50">
           <h3 className="text-sm font-medium text-slate-400 mb-2">Total Claims Issued</h3>
           <p className="text-2xl font-bold text-white">
-            {identityList.reduce((total, identity) => {
+            {managedIdentities.reduce((total, identity) => {
               const claims = extractClaimsFromMap(identity.payload.claims);
               return total + claims.length;
             }, 0)}
@@ -414,14 +416,14 @@ export function IdentityManager() {
       <Card>
         <h3 className="text-lg font-semibold text-slate-200 mb-4">
           Identities
-          {identityList.length > 0 && (
+          {managedIdentities.length > 0 && (
             <span className="ml-2 px-2 py-0.5 text-xs bg-emerald-600 rounded-full">
-              {identityList.length}
+              {managedIdentities.length}
             </span>
           )}
         </h3>
 
-        {identityList.length === 0 ? (
+        {managedIdentities.length === 0 ? (
           <div className="text-center py-8 text-slate-400">
             <div className="text-4xl mb-2">👤</div>
             <p>No identities created yet</p>
@@ -429,7 +431,7 @@ export function IdentityManager() {
           </div>
         ) : (
           <div className="space-y-4">
-            {identityList.map((identity) => {
+            {managedIdentities.map((identity) => {
               const claims = extractClaimsFromMap(identity.payload.claims);
               const claimTopics = new Set(claims.map(c => c.topic));
               const isExpanded = selectedIdentity === identity.contractId;
