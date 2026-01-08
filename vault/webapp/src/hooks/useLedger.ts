@@ -109,5 +109,70 @@ export function useExerciseChoice<TArgs = Record<string, never>, TResult = unkno
   });
 }
 
+/**
+ * Generic exercise choice by key hook.
+ * @param templateId - The template ID
+ * @param choice - The choice name to exercise
+ * @param options - Mutation options including cache invalidation keys
+ */
+export function useExerciseChoiceByKey<TArgs = Record<string, never>, TResult = unknown>(
+  templateId: string,
+  choice: string,
+  options?: { invalidateKeys?: readonly QueryKey[] }
+) {
+  const client = useLedgerClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { key: unknown; args?: TArgs }) => {
+      return client!.exerciseByKey<TResult>(
+        templateId,
+        input.key,
+        choice,
+        input.args ?? {}
+      );
+    },
+    onSuccess: () => {
+      options?.invalidateKeys?.forEach((key) => {
+        queryClient.invalidateQueries({ queryKey: [...key] });
+      });
+    },
+  });
+}
+
+/**
+ * Generic exercise interface choice hook.
+ * @param templateId - The template ID of the contract
+ * @param interfaceId - The interface ID containing the choice
+ * @param choice - The choice name to exercise
+ * @param options - Mutation options including cache invalidation keys
+ */
+export function useExerciseInterfaceChoice<TArgs = Record<string, never>, TResult = unknown>(
+  templateId: string,
+  interfaceId: string,
+  choice: string,
+  options?: { invalidateKeys?: readonly QueryKey[] }
+) {
+  const client = useLedgerClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { contractId: string; args?: TArgs }) => {
+      return client!.exerciseInterface<unknown, TResult>(
+        templateId,
+        interfaceId,
+        input.contractId as ContractId<unknown>,
+        choice,
+        input.args ?? {}
+      );
+    },
+    onSuccess: () => {
+      options?.invalidateKeys?.forEach((key) => {
+        queryClient.invalidateQueries({ queryKey: [...key] });
+      });
+    },
+  });
+}
+
 // Re-export Contract type for convenience
 export type { Contract };
