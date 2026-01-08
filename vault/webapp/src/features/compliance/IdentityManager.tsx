@@ -98,16 +98,7 @@ export function IdentityManager() {
   );
 
   const identityList = (identities as IdentityContract[]) || [];
-
-  const partyName = party ? shortenParty(party).toLowerCase() : '';
-  const isBank = partyName === 'bank';
-  const isOperator = party && identityList.some(i => i.payload.operator === party);
-  const isAdmin = isBank || isOperator;
-  const myIdentity = identityList.find(i => i.payload.subject === party);
-
-  const managedIdentities = isBank
-    ? identityList.filter(i => i.payload.subject !== party)
-    : identityList;
+  const managedIdentities = identityList.filter(i => i.payload.subject !== party);
 
   const resolvePartyId = async (partyName: string): Promise<string | null> => {
     if (!client) return null;
@@ -241,117 +232,6 @@ export function IdentityManager() {
           <span className="ml-3 text-slate-400">Loading identities...</span>
         </div>
       </Card>
-    );
-  }
-
-  if (!isAdmin) {
-    const myClaims = myIdentity ? extractClaimsFromMap(myIdentity.payload.claims) : [];
-
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-100">My Identity</h2>
-          <p className="text-slate-400">View your on-chain identity and claims</p>
-        </div>
-
-        <Card>
-          <h3 className="text-sm font-medium text-slate-400 mb-2">Current Party</h3>
-          {party && <PartyBadge party={party} />}
-        </Card>
-
-        {myIdentity ? (
-          <>
-            <Card className="border-emerald-700/50">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-emerald-600/20 flex items-center justify-center">
-                  <span className="text-3xl">✓</span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-slate-200">Identity Verified</h3>
-                  <p className="text-slate-400">
-                    Your on-chain identity is active and managed by {shortenParty(myIdentity.payload.operator)}
-                  </p>
-                </div>
-              </div>
-            </Card>
-
-            <Card>
-              <h3 className="text-lg font-semibold text-slate-200 mb-4">My Claims</h3>
-              {myClaims.length === 0 ? (
-                <div className="text-center py-8 text-slate-400">
-                  <div className="text-4xl mb-2">📜</div>
-                  <p>No claims issued yet</p>
-                  <p className="text-sm mt-1">Contact the issuer to request claims for transfers</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {myClaims.map(({ topic, claim }) => {
-                    const info = CLAIM_LABELS[topic];
-                    return (
-                      <div
-                        key={topic}
-                        className="p-4 rounded-lg border bg-cyan-900/30 border-cyan-700"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{info.icon}</span>
-                          <div>
-                            <p className="font-medium text-cyan-300">{info.label}</p>
-                            <p className="text-xs text-slate-400">{info.description}</p>
-                            <p className="text-xs text-slate-500 mt-1">
-                              Issued by: {shortenParty(claim.issuer)}
-                            </p>
-                          </div>
-                          <div className="ml-auto">
-                            <span className="px-2 py-1 text-xs bg-emerald-900/50 text-emerald-400 rounded">
-                              Active
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
-
-            <Card>
-              <h3 className="text-lg font-semibold text-slate-200 mb-4">Available Claim Types</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                {ALL_CLAIM_TOPICS.map(topic => {
-                  const info = CLAIM_LABELS[topic];
-                  const hasClaim = myClaims.some(c => c.topic === topic);
-                  return (
-                    <div
-                      key={topic}
-                      className={`p-3 rounded-lg border ${hasClaim
-                        ? 'bg-emerald-900/20 border-emerald-700/50'
-                        : 'bg-slate-900/30 border-slate-700'
-                        }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span>{info.icon}</span>
-                        <span className={hasClaim ? 'text-emerald-400' : 'text-slate-400'}>{info.label}</span>
-                        <span className="ml-auto">{hasClaim ? '✓' : '✗'}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-          </>
-        ) : (
-          <Card className="border-amber-700/50">
-            <div className="text-center py-8">
-              <div className="text-4xl mb-4">👤</div>
-              <h3 className="text-xl font-semibold text-amber-400 mb-2">No Identity Found</h3>
-              <p className="text-slate-400">You don't have an on-chain identity yet.</p>
-              <p className="text-sm text-slate-500 mt-2">
-                Contact the LNRD issuer to create your identity and receive claims.
-              </p>
-            </div>
-          </Card>
-        )}
-      </div>
     );
   }
 
@@ -536,4 +416,3 @@ export function IdentityManager() {
     </div>
   );
 }
-

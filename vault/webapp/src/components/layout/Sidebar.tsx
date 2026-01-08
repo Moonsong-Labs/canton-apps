@@ -137,7 +137,7 @@ export function Sidebar() {
     label: isBank ? 'Compliance' : 'My Identity',
     icon: '🛡️',
     items: [
-      { to: isBank ? '/compliance' : '/compliance/identities', label: isBank ? 'Compliance Management' : 'My Identity', icon: '🛡️' },
+      { to: isBank ? '/compliance' : '/my-identity', label: isBank ? 'Compliance Management' : 'My Identity', icon: '🛡️' },
     ],
   };
 
