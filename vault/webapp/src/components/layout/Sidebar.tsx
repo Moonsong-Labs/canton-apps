@@ -113,6 +113,13 @@ export function Sidebar() {
       ],
     },
     {
+      label: 'History',
+      icon: '📜',
+      items: [
+        { to: '/history', label: 'Contract History', icon: '📊' },
+      ],
+    },
+    {
       label: 'Vault',
       icon: '🏦',
       items: [

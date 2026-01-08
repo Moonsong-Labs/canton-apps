@@ -23,6 +23,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/navigator-api': {
+        target: process.env.VITE_NAVIGATOR_URL || 'http://localhost:7500',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/navigator-api/, '/api'),
+      },
     },
   },
   define: {

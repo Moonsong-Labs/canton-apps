@@ -15,6 +15,7 @@ import { CreateAccountRequestList } from '@/features/vault/CreateAccountRequestL
 import { CreditAccountRequestList } from '@/features/vault/CreditAccountRequestList';
 import { LunarDollarBalance, LunarDollarTransfers } from '@/features/lunar-dollar';
 import { ComplianceDashboard, BlacklistManager, ClaimsManager, IdentityManager, MyIdentity } from '@/features/compliance';
+import { History } from '@/features/holdings';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -43,6 +44,7 @@ function App() {
           <Route path="/compliance/claims/:id" element={<ClaimsManager />} />
           <Route path="/compliance/identities" element={<IdentityManager />} />
           <Route path="/my-identity" element={<MyIdentity />} />
+          <Route path="/history" element={<History />} />
           <Route path="/contracts" element={<ContractList />} />
 
           {/* Vault Routes */}
