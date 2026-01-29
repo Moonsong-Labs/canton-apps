@@ -49,11 +49,12 @@ acceptTransferRequest : AcceptTransferRequestArgs -> Script (ContractId Holding.
 acceptTransferRequest args = do
   sender <- lookupParty args.sender
   receiver <- lookupParty args.receiver
-  newHoldingCid <- submit sender do
+  bank <- lookupParty "Bank"
+  
+  newHoldingCid <- submitMulti [sender, bank] [] do
     exerciseCmd args.requestCid TransferRequest.Accept with
       holdingCid = args.holdingCid
 
   debug $ "Accepted transfer request from " <> args.sender <> " to " <> args.receiver
   
   pure newHoldingCid
-  

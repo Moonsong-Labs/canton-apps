@@ -53,6 +53,7 @@ testX402PaymentFlow = do
 
 runPayment : Script ()
 runPayment = do
+  setup
   alice <- lookupParty "Alice"
 
   holdingCid <- mint MintArgs with

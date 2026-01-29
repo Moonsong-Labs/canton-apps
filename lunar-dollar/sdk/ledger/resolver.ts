@@ -4,18 +4,18 @@
 
 /**
  * PackageResolver handles runtime resolution of template IDs from package names to package hashes.
- *
+ * 
  * Canton JSON API requires template IDs in the format:
  *   \`<64-char-package-hash>:<Module.Path>:<TemplateName>\`
- *
+ * 
  * But the generated SDK uses package names for readability:
  *   \`<package-name>:<Module.Path>:<TemplateName>\`
- *
+ * 
  * This class resolves package names to their hashes at runtime by:
  * 1. Fetching all package hashes from /v1/packages
  * 2. Testing each hash against known templates via /v1/query
  * 3. Caching successful mappings for the session
- *
+ * 
  * @example
  * const resolver = new PackageResolver();
  * await resolver.initialize(ledgerUrl, headers);
@@ -29,13 +29,13 @@
 export class PackageResolver {
   /** Cache mapping package names to their hashes */
   private packageCache = new Map<string, string>();
-
+  
   /** All available package hashes from the ledger */
   private packageHashes: string[] = [];
-
+  
   /** Whether the resolver has been initialized */
   private initialized = false;
-
+  
   /** Pending initialization promise to prevent duplicate init calls */
   private initPromise: Promise<void> | null = null;
 
@@ -50,45 +50,35 @@ export class PackageResolver {
    * Initialize the resolver by fetching all package hashes from the ledger.
    * Safe to call multiple times - only fetches once.
    */
-  async initialize(
-    baseUrl: string,
-    headers: Record<string, string>
-  ): Promise<void> {
+  async initialize(baseUrl: string, headers: Record<string, string>): Promise<void> {
     if (this.initialized) return;
-
+    
     // Prevent duplicate initialization
     if (this.initPromise) {
       return this.initPromise;
     }
-
+    
     this.initPromise = this.doInitialize(baseUrl, headers);
     return this.initPromise;
   }
-
-  private async doInitialize(
-    baseUrl: string,
-    headers: Record<string, string>
-  ): Promise<void> {
+  
+  private async doInitialize(baseUrl: string, headers: Record<string, string>): Promise<void> {
     try {
       const response = await fetch(`${baseUrl}/v1/packages`, {
-        method: "GET",
+        method: 'GET',
         headers,
       });
-
+      
       if (!response.ok) {
-        console.warn(
-          `PackageResolver: Failed to fetch packages: ${response.status}`
-        );
+        console.warn(`PackageResolver: Failed to fetch packages: ${response.status}`);
         return;
       }
-
-      const data = (await response.json()) as { result?: string[] };
+      
+      const data = await response.json() as { result?: string[] };
       this.packageHashes = data.result || [];
       this.initialized = true;
-
-      console.log(
-        `PackageResolver: Loaded ${this.packageHashes.length} package hashes`
-      );
+      
+      console.log(`PackageResolver: Loaded ${this.packageHashes.length} package hashes`);
     } catch (error) {
       console.warn(`PackageResolver: Initialization failed:`, error);
     }
@@ -96,7 +86,7 @@ export class PackageResolver {
 
   /**
    * Resolve a template ID from package name format to package hash format.
-   *
+   * 
    * @param templateId - Template ID in format "packageName:Module.Path:TemplateName"
    * @param baseUrl - Ledger base URL
    * @param headers - Request headers (including auth)
@@ -109,86 +99,79 @@ export class PackageResolver {
     headers: Record<string, string>
   ): Promise<string> {
     // Parse the template ID
-    const parts = templateId.split(":");
+    const parts = templateId.split(':');
     if (parts.length !== 3) {
-      throw new Error(
-        `Invalid template ID format: ${templateId}. Expected "package:Module.Path:TemplateName"`
-      );
+      throw new Error(`Invalid template ID format: ${templateId}. Expected "package:Module.Path:TemplateName"`);
     }
-
+    
     const [packageName, modulePath, templateName] = parts;
-
+    
     // If already a hash, return as-is
     if (this.isResolvedHash(packageName)) {
       return templateId;
     }
-
+    
     // Check cache first
     const cachedHash = this.packageCache.get(packageName);
     if (cachedHash) {
       return `${cachedHash}:${modulePath}:${templateName}`;
     }
-
+    
     // Ensure we have package hashes
     if (!this.initialized) {
       await this.initialize(baseUrl, headers);
     }
-
+    
     if (this.packageHashes.length === 0) {
-      throw new Error(
-        `PackageResolver: No packages available. Is the ledger running?`
-      );
+      throw new Error(`PackageResolver: No packages available. Is the ledger running?`);
     }
-
+    
     // Try each hash until we find one that works for this template
     for (const hash of this.packageHashes) {
       const testId = `${hash}:${modulePath}:${templateName}`;
-
+      
       try {
         const response = await fetch(`${baseUrl}/v1/query`, {
-          method: "POST",
+          method: 'POST',
           headers,
           body: JSON.stringify({
             templateIds: [testId],
             query: {},
           }),
         });
-
-        // Must check response body - JSON API returns 200 with errors in body
+        
+        // Canton JSON API may return HTTP 200 even when the body contains errors.
+        // Only treat it as success if the response body has no errors.
         if (response.ok) {
-          const data = (await response.json()) as {
-            status?: number;
-            errors?: string[];
-            result?: unknown;
-          };
+          const data = await response.json().catch(() => null) as
+            | { errors?: unknown; result?: unknown }
+            | null;
 
-          // Check for wrapped errors (JSON API returns { status, errors } for invalid templates)
-          if (data.errors && data.errors.length > 0) {
-            // Template not found in this package, try next
+          const errorsValue = data && typeof data === 'object' ? (data as { errors?: unknown }).errors : undefined;
+          const hasErrors =
+            Array.isArray(errorsValue) ? errorsValue.length > 0 : !!errorsValue;
+
+          if (hasErrors) {
+            // Wrong package hash for this template, try next
             continue;
           }
 
-          // Success - template exists in this package
+          // Success - cache mapping for future use
           this.packageCache.set(packageName, hash);
-          console.log(
-            `PackageResolver: Resolved "${packageName}" -> "${hash.substring(
-              0,
-              8
-            )}..."`
-          );
+          console.log(`PackageResolver: Resolved "${packageName}" -> "${hash.substring(0, 8)}..."`);
           return testId;
         }
-
+        
         // 400 with unknownTemplateIds means wrong package, try next
         // Other errors might be transient, continue trying
       } catch {
         // Network error, continue to next hash
       }
     }
-
+    
     throw new Error(
       `PackageResolver: Could not resolve package "${packageName}" for template "${modulePath}:${templateName}". ` +
-        `Tried ${this.packageHashes.length} packages. Ensure the DAR is deployed to the ledger.`
+      `Tried ${this.packageHashes.length} packages. Ensure the DAR is deployed to the ledger.`
     );
   }
 
@@ -202,7 +185,7 @@ export class PackageResolver {
     headers: Record<string, string>
   ): Promise<string[]> {
     return Promise.all(
-      templateIds.map((id) => this.resolveTemplateId(id, baseUrl, headers))
+      templateIds.map(id => this.resolveTemplateId(id, baseUrl, headers))
     );
   }
 
@@ -214,28 +197,12 @@ export class PackageResolver {
     this.packageHashes = [];
     this.initialized = false;
     this.initPromise = null;
-    console.log("PackageResolver: Cache cleared");
-  }
-
-  /**
-   * Force re-initialization by clearing cache and fetching packages again.
-   */
-  async reinitialize(
-    baseUrl: string,
-    headers: Record<string, string>
-  ): Promise<void> {
-    this.clearCache();
-    await this.initialize(baseUrl, headers);
   }
 
   /**
    * Get the current cache state for debugging.
    */
-  getCacheState(): {
-    initialized: boolean;
-    packageCount: number;
-    cachedMappings: number;
-  } {
+  getCacheState(): { initialized: boolean; packageCount: number; cachedMappings: number } {
     return {
       initialized: this.initialized,
       packageCount: this.packageHashes.length,
@@ -256,17 +223,6 @@ export function getPackageResolver(): PackageResolver {
     globalResolver = new PackageResolver();
   }
   return globalResolver;
-}
-
-/**
- * Reset the global PackageResolver.
- * Call this when the ledger is restarted to clear stale cache entries.
- */
-export function resetPackageResolver(): void {
-  if (globalResolver) {
-    globalResolver.clearCache();
-  }
-  globalResolver = null;
 }
 
 /**

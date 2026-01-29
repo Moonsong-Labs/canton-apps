@@ -1,0 +1,50 @@
+module Compliance.Validators.Blacklist where
+
+import DA.Set qualified as Set
+import Compliance.Validator (TransferValidator, ValidatorView(..), ValidationResult(..))
+
+template BlacklistValidator
+  with
+    operator : Party
+    blacklistedParties : Set.Set Party
+  where
+    signatory operator
+
+    interface instance TransferValidator for BlacklistValidator where
+      view = ValidatorView with
+        operator
+        validatorName = "BlacklistCheck"
+      
+      validate sender receiver _amount _instrument = do
+        currentTime <- getTime
+        let senderBlocked = Set.member sender blacklistedParties
+        let receiverBlocked = Set.member receiver blacklistedParties
+        pure ValidationResult with
+          approved = not senderBlocked && not receiverBlocked
+          reason = if senderBlocked then Some "Sender is blacklisted"
+                   else if receiverBlocked then Some "Receiver is blacklisted"
+                   else None
+          validatorName = "BlacklistCheck"
+          checkedAt = currentTime
+
+    choice AddToBlacklist : ContractId BlacklistValidator
+      with
+        party : Party
+      controller operator
+      do
+        create this with blacklistedParties = Set.insert party blacklistedParties
+
+    choice RemoveFromBlacklist : ContractId BlacklistValidator
+      with
+        party : Party
+      controller operator
+      do
+        create this with blacklistedParties = Set.delete party blacklistedParties
+
+    choice UpdateBlacklist : ContractId BlacklistValidator
+      with
+        newBlacklist : Set.Set Party
+      controller operator
+      do
+        create this with blacklistedParties = newBlacklist
+

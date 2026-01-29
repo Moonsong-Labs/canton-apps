@@ -2,12 +2,15 @@ module Tests.Tests where
 
 import Daml.Script
 
+import Scripts.Setup (setup)
 import Scripts.Mint (MintArgs(..), mint)
 import Scripts.Transfer (CreateTransferRequestArgs(..), AcceptTransferRequestArgs(..), createTransferRequest, acceptTransferRequest)
 import Scripts.Balance (BalanceArgs(..), balance)
 
 testTransferExactAmount : Script ()
 testTransferExactAmount = do
+  setup
+  
   holdingCid <- mint MintArgs with
     recipient = "Alice"
     amount = 100.0
@@ -30,6 +33,8 @@ testTransferExactAmount = do
 
 testTransferWithSplit : Script ()
 testTransferWithSplit = do
+  setup
+  
   holdingCid <- mint MintArgs with
     recipient = "Alice"
     amount = 500.0
@@ -49,4 +54,3 @@ testTransferWithSplit = do
   balance BalanceArgs with party = "Bob"
 
   pure ()
-

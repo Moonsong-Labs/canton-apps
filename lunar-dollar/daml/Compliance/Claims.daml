@@ -1,0 +1,19 @@
+module Compliance.Claims where
+
+data ClaimTopic 
+  = KYC
+  | AML
+  | ACCREDITED_INVESTOR
+  | QUALIFIED_PURCHASER
+  | INSTITUTIONAL
+  deriving (Eq, Show, Ord)
+
+data Claim = Claim
+  with
+    topic : ClaimTopic
+    issuer : Party
+    subject : Party
+    data_ : Text
+    issuedAt : Time
+  deriving (Eq, Show)
+

@@ -1,72 +1,57 @@
 module TransferRequest where
 
 import DA.Assert ((===))
-import DA.List (head)
-import DA.Set (fromList)
+import DA.Optional (fromOptional)
 
--- INTERFACE DEPENDENCIES --
 import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
-import Daml.Finance.Interface.Holding.V4.Transferable qualified as Transferable (Transfer(..), I)
-import Daml.Finance.Interface.Holding.V4.Fungible qualified as Fungible (I, Split(..))
 import Daml.Finance.Interface.Holding.V4.Util (getAmount, getInstrument)
-import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), InstrumentKey)
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), InstrumentKey(..))
 
--- | Initiate / Accept template to transfer a holding to a new owner.
+import Compliance.Registry (ComplianceRegistry, ValidateTransfer(..))
+import Holding.Transfer (splitAndTransfer)
+
 template TransferRequest
   with
     receiverAccount : AccountKey
-      -- ^ The account where the holding is sent.
     instrument : InstrumentKey
-      -- ^ The instrument referenced by the holding to be transferred.
     amount : Decimal
-      -- ^ Number of units to be transferred.
     currentOwner : Party
-      -- ^ The owner of the holding to be transferred.
   where
     signatory receiverAccount.owner
-    observer currentOwner
+    observer currentOwner, instrument.issuer
 
     ensure amount > 0.0
 
     choice Accept : ContractId Holding.I
       with
         holdingCid : ContractId Holding.I
-      controller currentOwner
+      controller currentOwner, instrument.issuer
       do
-        -- Sanity checks
+        (registryCid, _) <- fetchByKey @ComplianceRegistry instrument.issuer
+        
+        results <- exercise registryCid ValidateTransfer with
+          sender = currentOwner
+          receiver = receiverAccount.owner
+          amount
+          instrument
+        let rejections = filter (\r -> not r.approved) results
+        let rejectionReasons = map (\r -> fromOptional "Unknown reason" r.reason) rejections
+        assertMsg ("Transfer rejected by compliance: " <> show rejectionReasons) 
+          (null rejections)
+        
         holding <- fetch holdingCid
         let holdingAmount = getAmount holding
         assert(holdingAmount >= amount)
         getInstrument holding === instrument
 
-        -- Split holding if holding amount is greater than the requested amount
-        holdingToTransfer <- if holdingAmount > amount then do
-          let fungibleCid = coerceInterfaceContractId @Fungible.I holdingCid
-          splitResult <- exercise fungibleCid Fungible.Split with
-            amounts = [amount, holdingAmount - amount]
-          splitResult.rest === None
-          pure $ toInterfaceContractId @Holding.I (head splitResult.splitCids)
-        else
-          pure holdingCid
-
-        -- DO_TRANSFER_BEGIN
-        let transferableCid = coerceInterfaceContractId @Transferable.I holdingToTransfer
-
-        newTransferableCid <- exercise transferableCid Transferable.Transfer with
-          actors = fromList [currentOwner, receiverAccount.owner]
-          newOwnerAccount = receiverAccount
-
-        pure $ toInterfaceContractId @Holding.I newTransferableCid
-        -- DO_TRANSFER_END
+        splitAndTransfer [currentOwner, receiverAccount.owner] receiverAccount amount holdingCid
 
     choice Decline : ()
-      -- ^ Decline the request.
       controller currentOwner
       do
         pure ()
 
     choice Withdraw : ()
-      -- ^ Withdraw the request.
       controller receiverAccount.owner
       do
         pure ()

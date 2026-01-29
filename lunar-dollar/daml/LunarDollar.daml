@@ -6,11 +6,15 @@ import Daml.Finance.Interface.Holding.V4.Fungible qualified as Fungible (I, Merg
 import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), Id(..), InstrumentKey)
 import Daml.Finance.Interface.Util.V3.Common (qty)
 
+import Compliance.Registry (ComplianceRegistry)
+
 template LunarDollar with
     instrumentKey : InstrumentKey
+    complianceRegistryCid : ContractId ComplianceRegistry
+    publicParty : Party
   where
     signatory instrumentKey.issuer
-    observer instrumentKey.depository
+    observer instrumentKey.depository, publicParty
 
     key (instrumentKey.issuer, instrumentKey.id, instrumentKey.version) : (Party, Id, Text)
     maintainer key._1
@@ -38,3 +42,10 @@ template LunarDollar with
             let restFungibleCids = map (coerceInterfaceContractId @Fungible.I) rest
             mergedCid <- exercise fungibleCid Fungible.Merge with fungibleCids = restFungibleCids
             pure $ toInterfaceContractId @Holding.I mergedCid
+
+    choice UpdateComplianceRegistry : ContractId LunarDollar
+      with
+        newRegistryCid : ContractId ComplianceRegistry
+      controller instrumentKey.issuer
+      do
+        create this with complianceRegistryCid = newRegistryCid

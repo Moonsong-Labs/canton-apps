@@ -1,0 +1,125 @@
+module Scripts.Compliance where
+
+import Daml.Script
+import DA.Set qualified as Set
+import DA.Map qualified as Map
+
+import Scripts.Util (lookupParty)
+import Compliance.Validators.Blacklist (BlacklistValidator(..), AddToBlacklist(..), RemoveFromBlacklist(..))
+import Compliance.Validators.Claims (ClaimsValidator(..))
+import Compliance.Identity (Identity(..), AddClaim(..), RevokeClaim(..))
+import Compliance.Claims (Claim(..), ClaimTopic(..))
+
+data AddPartyToBlacklistArgs = AddPartyToBlacklistArgs with
+  validatorCid : ContractId BlacklistValidator
+  partyName : Text
+
+addPartyToBlacklist : AddPartyToBlacklistArgs -> Script (ContractId BlacklistValidator)
+addPartyToBlacklist args = do
+  bank <- lookupParty "Bank"
+  partyToBlacklist <- lookupParty args.partyName
+  
+  newValidatorCid <- submit bank do
+    exerciseCmd args.validatorCid AddToBlacklist with
+      party = partyToBlacklist
+  
+  debug $ "Added " <> args.partyName <> " to blacklist"
+  pure newValidatorCid
+
+data RemovePartyFromBlacklistArgs = RemovePartyFromBlacklistArgs with
+  validatorCid : ContractId BlacklistValidator
+  partyName : Text
+
+removePartyFromBlacklist : RemovePartyFromBlacklistArgs -> Script (ContractId BlacklistValidator)
+removePartyFromBlacklist args = do
+  bank <- lookupParty "Bank"
+  partyToRemove <- lookupParty args.partyName
+  
+  newValidatorCid <- submit bank do
+    exerciseCmd args.validatorCid RemoveFromBlacklist with
+      party = partyToRemove
+  
+  debug $ "Removed " <> args.partyName <> " from blacklist"
+  pure newValidatorCid
+
+getBlacklistValidator : Script (ContractId BlacklistValidator, BlacklistValidator)
+getBlacklistValidator = do
+  bank <- lookupParty "Bank"
+  [(cid, validator)] <- query @BlacklistValidator bank
+  pure (cid, validator)
+
+data CreateClaimsValidatorArgs = CreateClaimsValidatorArgs with
+  requiredSenderClaims : [ClaimTopic]
+  requiredReceiverClaims : [ClaimTopic]
+
+createClaimsValidator : CreateClaimsValidatorArgs -> Script (ContractId ClaimsValidator)
+createClaimsValidator args = do
+  bank <- lookupParty "Bank"
+  submit bank do
+    createCmd ClaimsValidator with
+      operator = bank
+      requiredSenderClaims = Set.fromList args.requiredSenderClaims
+      requiredReceiverClaims = Set.fromList args.requiredReceiverClaims
+
+getClaimsValidator : Script (ContractId ClaimsValidator, ClaimsValidator)
+getClaimsValidator = do
+  bank <- lookupParty "Bank"
+  [(cid, validator)] <- query @ClaimsValidator bank
+  pure (cid, validator)
+
+data CreateIdentityArgs = CreateIdentityArgs with
+  subjectName : Text
+
+createIdentity : CreateIdentityArgs -> Script (ContractId Identity)
+createIdentity args = do
+  bank <- lookupParty "Bank"
+  subject <- lookupParty args.subjectName
+  submit bank do
+    createCmd Identity with
+      operator = bank
+      subject = subject
+      claims = Map.empty
+
+data AddClaimArgs = AddClaimArgs with
+  subjectName : Text
+  topic : ClaimTopic
+  data_ : Text
+  issuerName : Text
+
+addClaim : AddClaimArgs -> Script (ContractId Identity)
+addClaim args = do
+  bank <- lookupParty "Bank"
+  subject <- lookupParty args.subjectName
+  issuer <- lookupParty args.issuerName
+  now <- getTime
+  
+  Some (identityCid, _) <- queryContractKey @Identity bank (bank, subject)
+  
+  submit bank do
+    exerciseCmd identityCid AddClaim with
+      claim = Claim with
+        topic = args.topic
+        issuer = issuer
+        subject = subject
+        data_ = args.data_
+        issuedAt = now
+
+data RevokeClaimArgs = RevokeClaimArgs with
+  subjectName : Text
+  topic : ClaimTopic
+
+revokeClaim : RevokeClaimArgs -> Script (ContractId Identity)
+revokeClaim args = do
+  bank <- lookupParty "Bank"
+  subject <- lookupParty args.subjectName
+  
+  Some (identityCid, _) <- queryContractKey @Identity bank (bank, subject)
+  
+  submit bank do
+    exerciseCmd identityCid RevokeClaim with topic = args.topic
+
+getIdentity : Text -> Script (Optional (ContractId Identity, Identity))
+getIdentity subjectName = do
+  bank <- lookupParty "Bank"
+  subject <- lookupParty subjectName
+  queryContractKey @Identity bank (bank, subject)

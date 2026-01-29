@@ -1,0 +1,43 @@
+module Compliance.Identity where
+
+import DA.Map qualified as Map
+import Compliance.Claims (Claim, ClaimTopic)
+
+template Identity
+  with
+    operator : Party
+    subject : Party
+    claims : Map.Map ClaimTopic Claim
+  where
+    signatory operator
+    observer subject
+
+    key (operator, subject) : (Party, Party)
+    maintainer key._1
+
+    choice AddClaim : ContractId Identity
+      with
+        claim : Claim
+      controller operator
+      do
+        assertMsg "Claim subject mismatch" (claim.subject == subject)
+        create this with claims = Map.insert claim.topic claim claims
+
+    choice RevokeClaim : ContractId Identity
+      with
+        topic : ClaimTopic
+      controller operator
+      do create this with claims = Map.delete topic claims
+
+    nonconsuming choice HasClaim : Bool
+      with
+        topic : ClaimTopic
+      controller operator
+      do pure $ Map.member topic claims
+
+    nonconsuming choice GetClaim : Optional Claim
+      with
+        topic : ClaimTopic
+      controller operator
+      do pure $ Map.lookup topic claims
+

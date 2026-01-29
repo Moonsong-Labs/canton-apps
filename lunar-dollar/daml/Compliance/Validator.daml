@@ -1,0 +1,33 @@
+module Compliance.Validator where
+
+import Daml.Finance.Interface.Types.Common.V3.Types (InstrumentKey)
+
+data ValidationResult = ValidationResult
+  with
+    approved : Bool
+    reason : Optional Text
+    validatorName : Text
+    checkedAt : Time
+  deriving (Eq, Show)
+
+data ValidatorView = ValidatorView
+  with
+    operator : Party
+    validatorName : Text
+  deriving (Eq, Show)
+
+interface TransferValidator where
+  viewtype ValidatorView
+
+  validate : Party -> Party -> Decimal -> InstrumentKey -> Update ValidationResult
+
+  nonconsuming choice Validate : ValidationResult
+    with
+      sender : Party
+      receiver : Party
+      amount : Decimal
+      instrument : InstrumentKey
+    controller (view this).operator
+    do
+      validate this sender receiver amount instrument
+

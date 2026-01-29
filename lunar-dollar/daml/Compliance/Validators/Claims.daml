@@ -1,0 +1,60 @@
+module Compliance.Validators.Claims where
+
+import DA.Set qualified as Set
+import Compliance.Validator (TransferValidator, ValidatorView(..), ValidationResult(..))
+import Compliance.Claims (ClaimTopic)
+import Compliance.Identity (Identity, HasClaim(..))
+
+template ClaimsValidator
+  with
+    operator : Party
+    requiredSenderClaims : Set.Set ClaimTopic
+    requiredReceiverClaims : Set.Set ClaimTopic
+  where
+    signatory operator
+
+    interface instance TransferValidator for ClaimsValidator where
+      view = ValidatorView with
+        operator
+        validatorName = "ClaimsCheck"
+      
+      validate sender receiver _amount _instrument = do
+        currentTime <- getTime
+        
+        senderResults <- forA (Set.toList requiredSenderClaims) $ \topic -> do
+          optIdentity <- lookupByKey @Identity (operator, sender)
+          case optIdentity of
+            None -> pure (topic, False)
+            Some identityCid -> do
+              hasValid <- exercise identityCid HasClaim with topic
+              pure (topic, hasValid)
+        
+        receiverResults <- forA (Set.toList requiredReceiverClaims) $ \topic -> do
+          optIdentity <- lookupByKey @Identity (operator, receiver)
+          case optIdentity of
+            None -> pure (topic, False)
+            Some identityCid -> do
+              hasValid <- exercise identityCid HasClaim with topic
+              pure (topic, hasValid)
+
+        let senderMissing = [topic | (topic, valid) <- senderResults, not valid]
+        let receiverMissing = [topic | (topic, valid) <- receiverResults, not valid]
+        let allValid = null senderMissing && null receiverMissing
+        
+        pure ValidationResult with
+          approved = allValid
+          reason = if not allValid 
+            then Some $ "Missing claims - Sender: " <> show senderMissing <> ", Receiver: " <> show receiverMissing
+            else None
+          validatorName = "ClaimsCheck"
+          checkedAt = currentTime
+
+    choice UpdateRequiredClaims : ContractId ClaimsValidator
+      with
+        newSenderClaims : Set.Set ClaimTopic
+        newReceiverClaims : Set.Set ClaimTopic  
+      controller operator
+      do create this with 
+          requiredSenderClaims = newSenderClaims
+          requiredReceiverClaims = newReceiverClaims
+

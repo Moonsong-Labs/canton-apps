@@ -1,38 +1,175 @@
-import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useContractQuery } from '@/hooks/useLedger';
+import { TemplateIds, Compliance_Identity_Identity } from '@lunar-dollar/lunar-dollar-api';
 
-const navItems = [
-  { to: '/dashboard', label: 'Dashboard', icon: '📊' },
-  { to: '/lunar-dollar', label: 'LNRD Balance', icon: '🌙' },
-  { to: '/lunar-dollar/transfers', label: 'LNRD Transfers', icon: '💸' },
-  { to: '/vault', label: 'Vault Dashboard', icon: '🏦' },
-  { to: '/vault/state', label: 'Vault States', icon: '📈' },
-  { to: '/vault/config', label: 'Vault Configs', icon: '⚙️' },
-  { to: '/vault/deposits', label: 'Deposits', icon: '💰' },
-  { to: '/vault/redeems', label: 'Redeems', icon: '💸' },
-  { to: '/vault/accounts/create', label: 'Create Accounts', icon: '👤' },
-  { to: '/vault/accounts/credit', label: 'Credit Accounts', icon: '💳' },
-  { to: '/contracts', label: 'All Contracts', icon: '📄' },
-];
+interface NavItem {
+  to: string;
+  label: string;
+  icon: string;
+}
+
+interface NavGroup {
+  label: string;
+  icon: string;
+  items: NavItem[];
+  defaultOpen?: boolean;
+}
+
+interface IdentityContract {
+  contractId: string;
+  payload: Compliance_Identity_Identity.Payload;
+}
+
+function NavGroupComponent({ group }: { group: NavGroup }) {
+  const location = useLocation();
+  const isGroupActive = group.items.some(item => location.pathname.startsWith(item.to));
+  const [isOpen, setIsOpen] = useState(group.defaultOpen || isGroupActive);
+
+  if (group.items.length === 1) {
+    const item = group.items[0];
+    return (
+      <NavLink
+        to={item.to}
+        className={({ isActive }) =>
+          `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+            isActive
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-400 hover:bg-slate-700/30 hover:text-slate-200'
+          }`
+        }
+      >
+        <span>{group.icon}</span>
+        <span className="font-medium text-sm">{group.label}</span>
+      </NavLink>
+    );
+  }
+
+  return (
+    <div className="mb-1">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+          isGroupActive
+            ? 'bg-slate-700/50 text-white'
+            : 'text-slate-400 hover:bg-slate-700/30 hover:text-slate-200'
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <span>{group.icon}</span>
+          <span className="font-medium text-sm">{group.label}</span>
+        </div>
+        <span className={`transition-transform duration-200 text-xs ${isOpen ? 'rotate-180' : ''}`}>
+          ▼
+        </span>
+      </button>
+      
+      <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="pl-4 mt-1 space-y-0.5">
+          {group.items.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/vault' || item.to === '/lunar-dollar' || item.to === '/compliance'}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-1.5 rounded-lg transition-colors text-sm ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-700'
+                }`
+              }
+            >
+              <span className="text-xs">{item.icon}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function Sidebar() {
+  const { party } = useAuth();
+  
+  const { data: identities } = useContractQuery<Compliance_Identity_Identity.Payload>(
+    TemplateIds.Compliance_Identity_Identity
+  );
+
+  const identityList = (identities as IdentityContract[]) || [];
+  const isAdmin = party && identityList.some(i => i.payload.operator === party);
+
+  const baseGroups: NavGroup[] = [
+    {
+      label: 'Overview',
+      icon: '📊',
+      defaultOpen: true,
+      items: [
+        { to: '/dashboard', label: 'Dashboard', icon: '🏠' },
+      ],
+    },
+    {
+      label: 'Lunar Dollar',
+      icon: '🌙',
+      items: [
+        { to: '/lunar-dollar', label: 'Balance', icon: '💰' },
+        { to: '/lunar-dollar/transfers', label: 'Transfers', icon: '💸' },
+      ],
+    },
+    {
+      label: 'Vault',
+      icon: '🏦',
+      items: [
+        { to: '/vault', label: 'Dashboard', icon: '📊' },
+        { to: '/vault/state', label: 'States', icon: '📈' },
+        { to: '/vault/config', label: 'Configs', icon: '⚙️' },
+        { to: '/vault/deposits', label: 'Deposits', icon: '📥' },
+        { to: '/vault/redeems', label: 'Redeems', icon: '📤' },
+      ],
+    },
+    {
+      label: 'Accounts',
+      icon: '👤',
+      items: [
+        { to: '/vault/accounts/create', label: 'Create Account', icon: '➕' },
+        { to: '/vault/accounts/credit', label: 'Credit Account', icon: '💳' },
+      ],
+    },
+  ];
+
+  const complianceGroup: NavGroup = isAdmin
+    ? {
+        label: 'Compliance',
+        icon: '🛡️',
+        items: [
+          { to: '/compliance', label: 'Dashboard', icon: '📋' },
+          { to: '/compliance/identities', label: 'Identities', icon: '🪪' },
+        ],
+      }
+    : {
+        label: 'Compliance',
+        icon: '🛡️',
+        items: [
+          { to: '/compliance/identities', label: 'My Compliance', icon: '🛡️' },
+        ],
+      };
+
+  const debugGroup: NavGroup = {
+    label: 'Debug',
+    icon: '🔧',
+    items: [
+      { to: '/contracts', label: 'All Contracts', icon: '📄' },
+    ],
+  };
+
+  const navGroups = [...baseGroups, complianceGroup, debugGroup];
+
   return (
-    <aside className="w-64 bg-slate-800 border-r border-slate-700 min-h-[calc(100vh-73px)]">
-      <nav className="p-4 space-y-1">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-300 hover:bg-slate-700'
-              }`
-            }
-          >
-            <span>{item.icon}</span>
-            <span>{item.label}</span>
-          </NavLink>
+    <aside className="w-56 bg-slate-800 border-r border-slate-700 min-h-[calc(100vh-73px)]">
+      <nav className="p-3 space-y-1">
+        {navGroups.map((group) => (
+          <NavGroupComponent key={group.label} group={group} />
         ))}
       </nav>
     </aside>

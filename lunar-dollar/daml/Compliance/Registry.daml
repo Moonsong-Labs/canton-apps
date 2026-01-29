@@ -1,0 +1,54 @@
+module Compliance.Registry where
+
+import Daml.Finance.Interface.Types.Common.V3.Types (InstrumentKey)
+import Compliance.Validator (TransferValidator, ValidationResult(..), Validate(..))
+
+template ComplianceRegistry
+  with
+    operator : Party
+    activeValidators : [ContractId TransferValidator]
+  where
+    signatory operator
+
+    key operator : Party
+    maintainer key
+
+    nonconsuming choice ValidateTransfer : [ValidationResult]
+      with
+        sender : Party
+        receiver : Party
+        amount : Decimal
+        instrument : InstrumentKey
+      controller operator
+      do
+        forA activeValidators $ \validatorCid -> do
+          exercise validatorCid Validate with
+            sender
+            receiver
+            amount
+            instrument
+
+    choice AddValidator : ContractId ComplianceRegistry
+      with
+        validatorCid : ContractId TransferValidator
+      controller operator
+      do
+        create this with
+          activeValidators = validatorCid :: activeValidators
+
+    choice RemoveValidator : ContractId ComplianceRegistry
+      with
+        validatorCid : ContractId TransferValidator
+      controller operator
+      do
+        create this with
+          activeValidators = filter (/= validatorCid) activeValidators
+
+    choice UpdateValidator : ContractId ComplianceRegistry
+      with
+        oldValidatorCid : ContractId TransferValidator
+        newValidatorCid : ContractId TransferValidator
+      controller operator
+      do
+        create this with
+          activeValidators = map (\cid -> if cid == oldValidatorCid then newValidatorCid else cid) activeValidators

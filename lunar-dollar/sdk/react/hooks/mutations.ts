@@ -1575,6 +1575,128 @@ export function useSingleCustodianActions() {
   };
 }
 
+/** Create ComplianceRegistry contracts */
+export function useCreateComplianceRegistry() {
+  return useContractMutation<API.Compliance_Registry_ComplianceRegistry.Payload>(TemplateIds.Compliance_Registry_ComplianceRegistry, {
+    invalidateQueries: [queryKeys.complianceRegistry.all],
+  });
+}
+
+/** Exercise ValidateTransfer on ComplianceRegistry */
+export function useValidateTransferComplianceRegistry() {
+  return useChoiceMutation<Parameters<typeof API.Compliance_Registry_ComplianceRegistry.validateTransfer>[1], CommandResult<ReturnType<typeof API.Compliance_Registry_ComplianceRegistry.validateTransfer>>>(
+    TemplateIds.Compliance_Registry_ComplianceRegistry,
+    'ValidateTransfer',
+    { invalidateQueries: [queryKeys.complianceRegistry.all] }
+  );
+}
+
+/** Exercise AddValidator on ComplianceRegistry */
+export function useAddValidatorComplianceRegistry() {
+  return useChoiceMutation<Parameters<typeof API.Compliance_Registry_ComplianceRegistry.addValidator>[1], CommandResult<ReturnType<typeof API.Compliance_Registry_ComplianceRegistry.addValidator>>>(
+    TemplateIds.Compliance_Registry_ComplianceRegistry,
+    'AddValidator',
+    { invalidateQueries: [queryKeys.complianceRegistry.all] }
+  );
+}
+
+/** Exercise RemoveValidator on ComplianceRegistry */
+export function useRemoveValidatorComplianceRegistry() {
+  return useChoiceMutation<Parameters<typeof API.Compliance_Registry_ComplianceRegistry.removeValidator>[1], CommandResult<ReturnType<typeof API.Compliance_Registry_ComplianceRegistry.removeValidator>>>(
+    TemplateIds.Compliance_Registry_ComplianceRegistry,
+    'RemoveValidator',
+    { invalidateQueries: [queryKeys.complianceRegistry.all] }
+  );
+}
+
+/** Grouped actions for ComplianceRegistry */
+export function useComplianceRegistryActions() {
+  const createMutation = useCreateComplianceRegistry();
+  const validateTransferMutation = useValidateTransferComplianceRegistry();
+  const addValidatorMutation = useAddValidatorComplianceRegistry();
+  const removeValidatorMutation = useRemoveValidatorComplianceRegistry();
+
+  return {
+    /** Create ComplianceRegistry */
+    create: (payload: API.Compliance_Registry_ComplianceRegistry.Payload) => createMutation.mutateAsync(payload),
+    isCreating: createMutation.isPending,
+    /** ValidateTransfer */
+    validateTransfer: (contractId: string, args: Parameters<typeof API.Compliance_Registry_ComplianceRegistry.validateTransfer>[1]) =>
+      validateTransferMutation.mutateAsync({ contractId, args }),
+    isValidateTransfering: validateTransferMutation.isPending,
+    /** AddValidator */
+    addValidator: (contractId: string, args: Parameters<typeof API.Compliance_Registry_ComplianceRegistry.addValidator>[1]) =>
+      addValidatorMutation.mutateAsync({ contractId, args }),
+    isAddValidatoring: addValidatorMutation.isPending,
+    /** RemoveValidator */
+    removeValidator: (contractId: string, args: Parameters<typeof API.Compliance_Registry_ComplianceRegistry.removeValidator>[1]) =>
+      removeValidatorMutation.mutateAsync({ contractId, args }),
+    isRemoveValidatoring: removeValidatorMutation.isPending,
+    error: createMutation.error || validateTransferMutation.error || addValidatorMutation.error || removeValidatorMutation.error,
+  };
+}
+
+/** Create BlacklistValidator contracts */
+export function useCreateBlacklistValidator() {
+  return useContractMutation<API.Compliance_Validators_Blacklist_BlacklistValidator.Payload>(TemplateIds.Compliance_Validators_Blacklist_BlacklistValidator, {
+    invalidateQueries: [queryKeys.blacklistValidator.all],
+  });
+}
+
+/** Exercise AddToBlacklist on BlacklistValidator */
+export function useAddToBlacklistBlacklistValidator() {
+  return useChoiceMutation<Parameters<typeof API.Compliance_Validators_Blacklist_BlacklistValidator.addToBlacklist>[1], CommandResult<ReturnType<typeof API.Compliance_Validators_Blacklist_BlacklistValidator.addToBlacklist>>>(
+    TemplateIds.Compliance_Validators_Blacklist_BlacklistValidator,
+    'AddToBlacklist',
+    { invalidateQueries: [queryKeys.blacklistValidator.all] }
+  );
+}
+
+/** Exercise RemoveFromBlacklist on BlacklistValidator */
+export function useRemoveFromBlacklistBlacklistValidator() {
+  return useChoiceMutation<Parameters<typeof API.Compliance_Validators_Blacklist_BlacklistValidator.removeFromBlacklist>[1], CommandResult<ReturnType<typeof API.Compliance_Validators_Blacklist_BlacklistValidator.removeFromBlacklist>>>(
+    TemplateIds.Compliance_Validators_Blacklist_BlacklistValidator,
+    'RemoveFromBlacklist',
+    { invalidateQueries: [queryKeys.blacklistValidator.all] }
+  );
+}
+
+/** Exercise UpdateBlacklist on BlacklistValidator */
+export function useUpdateBlacklistBlacklistValidator() {
+  return useChoiceMutation<Parameters<typeof API.Compliance_Validators_Blacklist_BlacklistValidator.updateBlacklist>[1], CommandResult<ReturnType<typeof API.Compliance_Validators_Blacklist_BlacklistValidator.updateBlacklist>>>(
+    TemplateIds.Compliance_Validators_Blacklist_BlacklistValidator,
+    'UpdateBlacklist',
+    { invalidateQueries: [queryKeys.blacklistValidator.all] }
+  );
+}
+
+/** Grouped actions for BlacklistValidator */
+export function useBlacklistValidatorActions() {
+  const createMutation = useCreateBlacklistValidator();
+  const addToBlacklistMutation = useAddToBlacklistBlacklistValidator();
+  const removeFromBlacklistMutation = useRemoveFromBlacklistBlacklistValidator();
+  const updateBlacklistMutation = useUpdateBlacklistBlacklistValidator();
+
+  return {
+    /** Create BlacklistValidator */
+    create: (payload: API.Compliance_Validators_Blacklist_BlacklistValidator.Payload) => createMutation.mutateAsync(payload),
+    isCreating: createMutation.isPending,
+    /** AddToBlacklist */
+    addToBlacklist: (contractId: string, args: Parameters<typeof API.Compliance_Validators_Blacklist_BlacklistValidator.addToBlacklist>[1]) =>
+      addToBlacklistMutation.mutateAsync({ contractId, args }),
+    isAddToBlacklisting: addToBlacklistMutation.isPending,
+    /** RemoveFromBlacklist */
+    removeFromBlacklist: (contractId: string, args: Parameters<typeof API.Compliance_Validators_Blacklist_BlacklistValidator.removeFromBlacklist>[1]) =>
+      removeFromBlacklistMutation.mutateAsync({ contractId, args }),
+    isRemoveFromBlacklisting: removeFromBlacklistMutation.isPending,
+    /** UpdateBlacklist */
+    updateBlacklist: (contractId: string, args: Parameters<typeof API.Compliance_Validators_Blacklist_BlacklistValidator.updateBlacklist>[1]) =>
+      updateBlacklistMutation.mutateAsync({ contractId, args }),
+    isUpdateBlacklisting: updateBlacklistMutation.isPending,
+    error: createMutation.error || addToBlacklistMutation.error || removeFromBlacklistMutation.error || updateBlacklistMutation.error,
+  };
+}
+
 /** Create LunarDollar contracts */
 export function useCreateLunarDollar() {
   return useContractMutation<API.LunarDollar.Payload>(TemplateIds.LunarDollar, {
