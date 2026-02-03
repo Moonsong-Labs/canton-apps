@@ -124,7 +124,6 @@ export function ComplianceDashboard() {
         claimEntries = claimsObj.map as Array<[string, unknown]>;
       }
     }
-
     for (const [topic, claimData] of claimEntries) {
       const claim = claimData as Record<string, unknown>;
       result.push({
@@ -134,7 +133,6 @@ export function ComplianceDashboard() {
         issuedAt: String(claim.issuedAt || ''),
       });
     }
-
     return result;
   };
 

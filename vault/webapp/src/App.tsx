@@ -57,9 +57,9 @@ function App() {
           <Route path="/vault/redeems" element={<RedeemRequestList />} />
           <Route path="/vault/accounts/create" element={<CreateAccountRequestList />} />
           <Route path="/vault/accounts/credit" element={<CreditAccountRequestList />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+        </Route >
+      </Routes >
+    </BrowserRouter >
   );
 }
 
