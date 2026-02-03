@@ -301,6 +301,74 @@ export class CantonLedgerClient implements LedgerConnection {
   }
 
   /**
+   * Exercise a choice on a contract by key.
+   * Template IDs are automatically resolved from package names to hashes.
+   * @param actAs - Optional array of parties to act as (defaults to client's party)
+   */
+  async exerciseByKey<R>(
+    templateId: string,
+    key: unknown,
+    choice: string,
+    args: unknown,
+    actAs?: Party[]
+  ): Promise<ExerciseResult<R>> {
+    const resolvedTemplateId = await this.resolveTemplateId(templateId);
+
+    const data = await this.requestJson<{ exerciseResult: R; events?: unknown[] }>('/v1/exercise', {
+      method: 'POST',
+      body: JSON.stringify({
+        templateId: resolvedTemplateId,
+        key,
+        choice,
+        argument: args,
+        meta: {
+          actAs: actAs || [this.party],
+        },
+      }),
+    });
+
+    return {
+      exerciseResult: data.exerciseResult,
+      events: data.events || [],
+    };
+  }
+
+  /**
+   * Exercise an interface choice on a contract.
+   * Both template and interface IDs are automatically resolved.
+   */
+  async exerciseInterface<T, R>(
+    templateId: string,
+    interfaceId: string,
+    contractId: ContractId<T>,
+    choice: string,
+    args: unknown,
+    actAs?: Party[]
+  ): Promise<ExerciseResult<R>> {
+    const resolvedTemplateId = await this.resolveTemplateId(templateId);
+    const resolvedInterfaceId = await this.resolveTemplateId(interfaceId);
+
+    const data = await this.requestJson<{ exerciseResult: R; events?: unknown[] }>('/v1/exercise', {
+      method: 'POST',
+      body: JSON.stringify({
+        templateId: resolvedTemplateId,
+        interfaceId: resolvedInterfaceId,
+        contractId,
+        choice,
+        argument: args,
+        meta: {
+          actAs: actAs || [this.party],
+        },
+      }),
+    });
+
+    return {
+      exerciseResult: data.exerciseResult,
+      events: data.events || [],
+    };
+  }
+
+  /**
    * Fetch a specific contract by ID.
    */
   async fetch<T>(contractId: ContractId<T>): Promise<Contract<T> | null> {

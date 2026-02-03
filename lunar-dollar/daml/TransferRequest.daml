@@ -44,7 +44,7 @@ template TransferRequest
         assert(holdingAmount >= amount)
         getInstrument holding === instrument
 
-        splitAndTransfer [currentOwner, receiverAccount.owner] receiverAccount amount holdingCid
+        splitAndTransfer [currentOwner, receiverAccount.owner, receiverAccount.custodian] receiverAccount amount holdingCid
 
     choice Decline : ()
       controller currentOwner

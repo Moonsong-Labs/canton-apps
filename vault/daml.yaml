@@ -52,7 +52,7 @@ data-dependencies:
   # - .lib/daml-finance-instrument-structuredproduct.dar
   # - .lib/daml-finance-instrument-swap.dar
   # - .lib/daml-finance-util.dar
-start-navigator: no
+start-navigator: yes
 init-script: Scripts.SetupAll:setupAll
 build-options:
   - --target=1.17

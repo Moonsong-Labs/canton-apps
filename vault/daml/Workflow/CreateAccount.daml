@@ -50,7 +50,7 @@ template Request
           description
           holdingFactory
           controllers = Account.Controllers with
-            outgoing = Set.singleton owner
+            outgoing = Set.fromList [owner, custodian]
             incoming = Set.singleton owner
           observers = Map.fromList [("AccountObservers", observersSet)]
 

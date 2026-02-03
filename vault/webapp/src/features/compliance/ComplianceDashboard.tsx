@@ -112,9 +112,9 @@ export function ComplianceDashboard() {
   const getClaimsFromIdentity = (identity: IdentityContract) => {
     const claims = identity.payload.claims as unknown;
     const result: Array<{ topic: string; issuer: string; data: string; issuedAt: string }> = [];
-    
+
     if (!claims) return result;
-    
+
     let claimEntries: Array<[string, unknown]> = [];
     if (Array.isArray(claims)) {
       claimEntries = claims as Array<[string, unknown]>;
@@ -124,7 +124,6 @@ export function ComplianceDashboard() {
         claimEntries = claimsObj.map as Array<[string, unknown]>;
       }
     }
-    
     for (const [topic, claimData] of claimEntries) {
       const claim = claimData as Record<string, unknown>;
       result.push({
@@ -134,7 +133,6 @@ export function ComplianceDashboard() {
         issuedAt: String(claim.issuedAt || ''),
       });
     }
-    
     return result;
   };
 
@@ -188,7 +186,7 @@ export function ComplianceDashboard() {
                     {myIdentity ? 'Identity Verified' : 'No Identity Found'}
                   </h3>
                   <p className="text-sm text-slate-400">
-                    {myIdentity 
+                    {myIdentity
                       ? 'You have an on-chain identity that can hold claims'
                       : 'Contact the issuer to create your identity'}
                   </p>
@@ -203,7 +201,7 @@ export function ComplianceDashboard() {
                   {requiredClaims.map(claim => {
                     const hasClaim = myClaimTopics.has(claim);
                     return (
-                      <div 
+                      <div
                         key={claim}
                         className={`p-3 rounded-lg border ${hasClaim ? 'bg-emerald-900/20 border-emerald-700/50' : 'bg-red-900/20 border-red-700/50'}`}
                       >
