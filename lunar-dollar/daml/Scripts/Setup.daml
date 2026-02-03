@@ -5,6 +5,10 @@ import DA.Map qualified as Map (fromList)
 import DA.Set qualified as Set (fromList, empty)
 
 import Daml.Finance.Interface.Account.V4.Factory qualified as AccountFactory (I)
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..))
+
+import LunarDollar (LunarDollar(..))
+import LunarDollar qualified
 import Daml.Finance.Interface.Instrument.Token.V4.Factory qualified as TokenFactory (Create(..), I)
 import Daml.Finance.Interface.Instrument.Token.V4.Types (Token(..))
 import Daml.Finance.Interface.Types.Common.V3.Types (Id(..), HoldingStandard(..), InstrumentKey(..))
@@ -15,7 +19,6 @@ import Daml.Finance.Instrument.Token.V4.Factory qualified as Token (Factory(..))
 
 import Scripts.Util (createHoldingFactory, getOrCreateParty, createBankAccount)
 
-import LunarDollar
 import Compliance.Registry (ComplianceRegistry(..))
 import Compliance.Reference (ComplianceReference(..))
 import Compliance.Validator (TransferValidator)
@@ -91,12 +94,24 @@ setup = script do
         validAsOf = now
       observers = mempty
 
-  submit bank do
+  lnrdCid <- submit bank do
     createCmd LunarDollar with
       instrumentKey = instrumentKey
       complianceRegistryCid
       publicParty = public
 
   debug $ "Created LunarDollar with compliance registry attached"
+
+  let aliceAccount = AccountKey with
+        custodian = bank
+        owner = alice
+        id = Id "Alice's Account"
+
+  submitMulti [bank, alice] [] do
+    exerciseCmd lnrdCid LunarDollar.Mint with
+      amount = 100.0
+      recipientAccount = aliceAccount
+
+  debug $ "Minted 100 LNRD to Alice"
 
   pure ()

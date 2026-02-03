@@ -7,6 +7,11 @@ export function PartySelector() {
   const navigate = useNavigate();
   const { setParty } = useAuth();
   const { data: parties, isLoading, error } = useParties();
+  
+  const filteredParties = parties?.filter((party) => {
+    const partyName = party.split('::')[0].toLowerCase();
+    return partyName !== 'public' && partyName !== 'sandbox';
+  });
 
   const handleSelectParty = (party: string) => {
     setParty(party);
@@ -44,7 +49,7 @@ export function PartySelector() {
           Select Party
         </h2>
         <div className="space-y-2">
-          {parties?.map((party) => (
+          {filteredParties?.map((party) => (
             <Button
               key={party}
               variant="secondary"
@@ -58,7 +63,7 @@ export function PartySelector() {
             </Button>
           ))}
         </div>
-        {(!parties || parties.length === 0) && (
+        {(!filteredParties || filteredParties.length === 0) && (
           <p className="text-slate-400 text-center">
             No parties found on ledger
           </p>
