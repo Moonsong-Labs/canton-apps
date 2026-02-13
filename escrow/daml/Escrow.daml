@@ -1,0 +1,68 @@
+module Escrow where
+
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey, InstrumentKey)
+
+import Holding.Transfer (splitAndTransfer)
+
+template EscrowProposal
+  with
+    buyer : Party
+    seller : Party
+    arbiter : Party
+    bank : Party
+    instrumentKey : InstrumentKey
+    amount : Decimal
+    buyerAccount : AccountKey
+    sellerAccount : AccountKey
+    escrowAccount : AccountKey
+    description : Text
+  where
+    signatory buyer
+    observer seller, bank, arbiter
+
+    ensure amount > 0.0
+
+    choice Accept : ContractId Escrow
+      with
+        holdingCid : ContractId Holding.I
+      controller seller, bank
+      do
+        escrowHoldingCid <- splitAndTransfer [buyer, bank] escrowAccount amount holdingCid
+        create Escrow with
+          buyer
+          seller
+          arbiter
+          bank
+          instrumentKey
+          amount
+          sellerAccount
+          escrowAccount
+          escrowHoldingCid
+          description
+
+    choice Cancel : ()
+      controller buyer
+      do pure ()
+
+template Escrow
+  with
+    buyer : Party
+    seller : Party
+    arbiter : Party
+    bank : Party
+    instrumentKey : InstrumentKey
+    amount : Decimal
+    sellerAccount : AccountKey
+    escrowAccount : AccountKey
+    escrowHoldingCid : ContractId Holding.I
+    description : Text
+  where
+    signatory buyer, seller
+    observer bank, arbiter
+
+    choice Release : ContractId Holding.I
+      controller buyer, bank
+      do
+        splitAndTransfer [bank, seller] sellerAccount amount escrowHoldingCid
+

@@ -1,0 +1,94 @@
+module Tests.EscrowTest where
+
+import Daml.Script
+
+import Scripts.SetupAll (setupAll)
+import Scripts.Mint (MintArgs(..), mint)
+import Scripts.Balance (BalanceArgs(..), balance)
+import Scripts.Escrow
+  ( CreateEscrowProposalArgs(..), createEscrowProposal
+  , AcceptEscrowArgs(..), acceptEscrow
+  , ReleaseEscrowArgs(..), releaseEscrow
+  )
+
+testEscrowHappyPath : Script ()
+testEscrowHappyPath = do
+  _ <- setupAll
+
+  debug "=== Escrow Happy Path Test ==="
+
+  holdingCid <- mint MintArgs with
+    recipient = "Alice"
+    amount = 50.0
+
+  debug "1. Alice has 50 LNRD"
+  balance BalanceArgs with party = "Alice"
+
+  proposalCid <- createEscrowProposal CreateEscrowProposalArgs with
+    buyer = "Alice"
+    seller = "Bob"
+    arbiter = "Bank"
+    amount = 50.0
+    description = "Test escrow"
+
+  debug "2. Alice created escrow proposal for 50 LNRD"
+
+  escrowCid <- acceptEscrow AcceptEscrowArgs with
+    buyer = "Alice"
+    seller = "Bob"
+    proposalCid
+    holdingCid
+
+  debug "3. Escrow funded — LNRD locked in escrow account"
+  balance BalanceArgs with party = "Alice"
+
+  _ <- releaseEscrow ReleaseEscrowArgs with
+    buyer = "Alice"
+    escrowCid
+
+  debug "4. Buyer released — LNRD transferred to seller"
+  balance BalanceArgs with party = "Alice"
+  balance BalanceArgs with party = "Bob"
+
+  pure ()
+
+testEscrowWithSplit : Script ()
+testEscrowWithSplit = do
+  _ <- setupAll
+
+  debug "=== Escrow With Split Test ==="
+
+  holdingCid <- mint MintArgs with
+    recipient = "Alice"
+    amount = 200.0
+
+  debug "1. Alice has 200 LNRD"
+
+  proposalCid <- createEscrowProposal CreateEscrowProposalArgs with
+    buyer = "Alice"
+    seller = "Bob"
+    arbiter = "Bank"
+    amount = 75.0
+    description = "Partial escrow"
+
+  debug "2. Alice created escrow proposal for 75 LNRD"
+
+  escrowCid <- acceptEscrow AcceptEscrowArgs with
+    buyer = "Alice"
+    seller = "Bob"
+    proposalCid
+    holdingCid
+
+  debug "3. Escrow funded — 75 LNRD locked, 125 LNRD remains with Alice"
+  balance BalanceArgs with party = "Alice"
+
+  _ <- releaseEscrow ReleaseEscrowArgs with
+    buyer = "Alice"
+    escrowCid
+
+  debug "4. Released — Alice: 125 LNRD, Bob: 75 LNRD"
+  balance BalanceArgs with party = "Alice"
+  balance BalanceArgs with party = "Bob"
+
+  pure ()
+
