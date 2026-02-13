@@ -1,0 +1,22 @@
+module Scripts.Setup where
+
+import Daml.Script
+
+import Daml.Finance.Interface.Account.V4.Factory qualified as AccountFactory (I)
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey, HoldingFactoryKey(..), Id(..))
+
+import Scripts.Util (lookupParty, createBankAccount)
+
+setupEscrow : Script AccountKey
+setupEscrow = do
+  bank <- lookupParty "Bank"
+  alice <- lookupParty "Alice"
+  bob <- lookupParty "Bob"
+
+  [(accountFactoryCid, _)] <- queryInterface @AccountFactory.I bank
+  let holdingFactory = HoldingFactoryKey with provider = bank; id = Id "Holding Factory"
+
+  escrowAccount <- createBankAccount bank holdingFactory accountFactoryCid bank "Escrow Account" [alice, bob]
+  debug "Created bank escrow account"
+  pure escrowAccount
+

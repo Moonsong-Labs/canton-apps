@@ -1,0 +1,79 @@
+module Scripts.Escrow where
+
+import Daml.Script
+
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), Id(..))
+
+import Escrow (EscrowProposal(..), Escrow, Accept(..), Release(..))
+import Scripts.Util (lookupParty, getLNRD)
+
+data CreateEscrowProposalArgs = CreateEscrowProposalArgs with
+  buyer : Text
+  seller : Text
+  arbiter : Text
+  amount : Decimal
+  description : Text
+
+createEscrowProposal : CreateEscrowProposalArgs -> Script (ContractId EscrowProposal)
+createEscrowProposal args = do
+  buyer <- lookupParty args.buyer
+  seller <- lookupParty args.seller
+  arbiter <- lookupParty args.arbiter
+  bank <- lookupParty "Bank"
+  (_, lnrd) <- getLNRD
+
+  let
+    buyerAccount = AccountKey with custodian = bank; owner = buyer; id = Id (args.buyer <> "'s Account")
+    sellerAccount = AccountKey with custodian = bank; owner = seller; id = Id (args.seller <> "'s Account")
+    escrowAccount = AccountKey with custodian = bank; owner = bank; id = Id "Escrow Account"
+
+  proposalCid <- submit buyer do
+    createCmd EscrowProposal with
+      buyer
+      seller
+      arbiter
+      bank
+      instrumentKey = lnrd.instrumentKey
+      amount = args.amount
+      buyerAccount
+      sellerAccount
+      escrowAccount
+      description = args.description
+
+  debug $ "Created escrow proposal for " <> show args.amount <> " LNRD"
+  pure proposalCid
+
+data AcceptEscrowArgs = AcceptEscrowArgs with
+  buyer : Text
+  seller : Text
+  proposalCid : ContractId EscrowProposal
+  holdingCid : ContractId Holding.I
+
+acceptEscrow : AcceptEscrowArgs -> Script (ContractId Escrow)
+acceptEscrow args = do
+  seller <- lookupParty args.seller
+  bank <- lookupParty "Bank"
+
+  escrowCid <- submitMulti [seller, bank] [] do
+    exerciseCmd args.proposalCid Accept with
+      holdingCid = args.holdingCid
+
+  debug "Escrow funded"
+  pure escrowCid
+
+data ReleaseEscrowArgs = ReleaseEscrowArgs with
+  buyer : Text
+  escrowCid : ContractId Escrow
+
+releaseEscrow : ReleaseEscrowArgs -> Script (ContractId Holding.I)
+releaseEscrow args = do
+  buyer <- lookupParty args.buyer
+  bank <- lookupParty "Bank"
+
+  holdingCid <- submitMulti [buyer, bank] [] do
+    exerciseCmd args.escrowCid Release
+
+  debug "Escrow released to seller"
+  pure holdingCid
+

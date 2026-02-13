@@ -22,6 +22,12 @@ echo ">>> vault"
 cd "$SCRIPT_DIR/vault"
 ./get-dependencies.sh
 
+# Escrow
+echo ""
+echo ">>> escrow"
+cd "$SCRIPT_DIR/escrow"
+./get-dependencies.sh
+
 echo ""
 echo "========================================"
 echo "All dependencies downloaded successfully!"

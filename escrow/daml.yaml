@@ -1,0 +1,32 @@
+sdk-version: 2.10.2
+name: escrow
+source: daml
+version: 0.0.1
+dependencies:
+  - daml-prim
+  - daml-script-lts
+  - daml-stdlib
+data-dependencies:
+  # LUNAR DOLLAR PROJECT
+  - ../lunar-dollar/.daml/dist/lunar-dollar-1.0.0.dar
+  # INTERFACE DEPENDENCIES
+  - .lib/daml-finance-interface-account.dar
+  - .lib/daml-finance-interface-holding.dar
+  - .lib/daml-finance-interface-instrument-base.dar
+  - .lib/daml-finance-interface-instrument-token.dar
+  - .lib/daml-finance-interface-lifecycle.dar
+  - .lib/daml-finance-interface-settlement.dar
+  - .lib/daml-finance-interface-types-common.dar
+  - .lib/daml-finance-interface-util.dar
+  # IMPLEMENTATION DEPENDENCIES
+  - .lib/daml-finance-account.dar
+  - .lib/daml-finance-holding.dar
+  - .lib/daml-finance-instrument-token.dar
+  - .lib/daml-finance-lifecycle.dar
+  - .lib/daml-finance-settlement.dar
+init-script: Scripts.SetupAll:setupAll
+build-options:
+  - --target=1.17
+  - -Wno-upgrade-interfaces
+  - -Wno-upgrade-exceptions
+

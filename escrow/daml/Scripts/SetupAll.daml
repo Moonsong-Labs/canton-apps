@@ -1,0 +1,14 @@
+module Scripts.SetupAll where
+
+import Daml.Script
+
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey)
+
+import LunarDollar.Setup (setupLunarDollar)
+import Scripts.Setup (setupEscrow)
+
+setupAll : Script AccountKey
+setupAll = do
+  setupLunarDollar
+  setupEscrow
+
