@@ -22,6 +22,12 @@ echo ">>> vault"
 cd "$SCRIPT_DIR/vault"
 ./get-dependencies.sh
 
+# RWA Grains
+echo ""
+echo ">>> rwa-grains"
+cd "$SCRIPT_DIR/rwa-grains"
+./get-dependencies.sh
+
 echo ""
 echo "========================================"
 echo "All dependencies downloaded successfully!"

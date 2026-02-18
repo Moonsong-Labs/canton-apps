@@ -1,0 +1,70 @@
+module Scripts.Util where
+
+import Daml.Script
+
+import Daml.Finance.Interface.Account.V4.Factory qualified as AccountFactory (I)
+import Daml.Finance.Interface.Holding.V4.Factory qualified as HoldingFactory (I, Reference(..))
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey, HoldingFactoryKey(..))
+
+import Daml.Finance.Holding.V4.Factory qualified as Holding (Factory(..))
+
+import Workflow.CreateAccount qualified as CreateAccount (Accept(..), Request(..))
+
+-- | Looks up an existing party by display name.
+lookupParty : Text -> Script Party
+lookupParty name = do
+  parties <- listKnownParties
+  case filter (\p -> p.displayName == Some name) parties of
+    (p :: _) -> pure p.party
+    [] -> fail $ "Party not found: " <> name
+
+-- | Creates a user + party given a hint.
+createParty : Text -> Script Party
+createParty name = do
+  party <- allocatePartyWithHint name $ PartyIdHint name
+  userId <- validateUserId name
+  createUser (User userId (Some party)) [CanActAs party]
+  pure party
+
+-- | Gets an existing party or creates a new one if it doesn't exist.
+getOrCreateParty : Text -> Script Party
+getOrCreateParty name = do
+  parties <- listKnownParties
+  case filter (\p -> p.displayName == Some name) parties of
+    (p :: _) -> do
+      debug $ "Party already exists: " <> name
+      pure p.party
+    [] -> do
+      debug $ "Creating new party: " <> name
+      createParty name
+
+-- | Create a holding factory as well as the companion Reference template.
+-- See: https://docs.daml.com/daml-finance/reference/patterns.html#reference-pattern
+createHoldingFactory : Holding.Factory -> Script HoldingFactoryKey
+createHoldingFactory holdingFactory = do
+  cid <- toInterfaceContractId @HoldingFactory.I <$> submit holdingFactory.provider do
+    createCmd holdingFactory
+  submit holdingFactory.provider do
+    createCmd HoldingFactory.Reference with
+      factoryView = view $ toInterface @HoldingFactory.I holdingFactory
+      cid
+      observers = holdingFactory.observers
+  pure $ HoldingFactoryKey with provider = holdingFactory.provider; id = holdingFactory.id
+
+-- | Helper to create an account at a custodian via the Request/Accept workflow.
+createCustodiedAccount : Party -> HoldingFactoryKey -> ContractId AccountFactory.I -> Party -> Text -> [Party] -> Script AccountKey
+createCustodiedAccount custodian holdingFactory accountFactoryCid owner label observers = do
+  requestCid <- submit owner do
+    createCmd CreateAccount.Request with
+      owner
+      custodian
+
+  accountKey <- submit custodian do
+    exerciseCmd requestCid CreateAccount.Accept with
+      label
+      description = label
+      accountFactoryCid
+      holdingFactory
+      observers
+
+  pure accountKey

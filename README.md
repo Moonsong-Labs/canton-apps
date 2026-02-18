@@ -12,6 +12,10 @@ A compliant stablecoin implementation with ERC-3643 style claims-based identity 
 
 A tokenized vault application built with Daml Finance for deposits, share issuance, and redemptions.
 
+### 🌾 [RWA Grains](./rwa-grains/)
+
+A tokenized real-world asset demo: WHEAT and SOY commodity tokens with atomic swap functionality.
+
 ## Getting Started
 
 ### Prerequisites

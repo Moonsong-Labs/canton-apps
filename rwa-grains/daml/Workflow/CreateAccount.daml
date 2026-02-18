@@ -1,0 +1,51 @@
+module Workflow.CreateAccount where
+
+import DA.Map qualified as Map (fromList)
+import DA.Set qualified as Set (fromList, singleton)
+
+import Daml.Finance.Interface.Account.V4.Account qualified as Account (Controllers(..))
+import Daml.Finance.Interface.Account.V4.Factory qualified as AccountFactory (Create(..), I)
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), HoldingFactoryKey, Id(..))
+
+template Request
+  with
+    custodian : Party
+    owner : Party
+  where
+    signatory owner
+    observer custodian
+
+    choice Accept : AccountKey
+      with
+        label : Text
+        description : Text
+        accountFactoryCid : ContractId AccountFactory.I
+        holdingFactory : HoldingFactoryKey
+        observers : [Party]
+      controller custodian
+      do
+        let
+          accountKey = AccountKey with
+            custodian
+            owner
+            id = Id label
+          observersSet = Set.fromList observers
+
+        exercise accountFactoryCid AccountFactory.Create with
+          account = accountKey
+          description
+          holdingFactory
+          controllers = Account.Controllers with
+            outgoing = Set.fromList [owner, custodian]
+            incoming = Set.singleton owner
+          observers = Map.fromList [("AccountObservers", observersSet)]
+
+        pure accountKey
+
+    choice Decline : ()
+      controller custodian
+      do pure ()
+
+    choice Withdraw : ()
+      controller owner
+      do pure ()

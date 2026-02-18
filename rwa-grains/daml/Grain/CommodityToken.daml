@@ -1,0 +1,33 @@
+module Grain.CommodityToken where
+
+import Daml.Finance.Interface.Account.V4.Account qualified as Account (Credit(..), I, exerciseInterfaceByKey)
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), Id(..), InstrumentKey)
+import Daml.Finance.Interface.Util.V3.Common (qty)
+
+-- | A tokenized commodity (e.g. WHEAT or SOY).
+-- The issuer (Warehouse) can mint tokens to recipient accounts,
+-- representing claims on physical grain stored at the warehouse.
+template CommodityToken
+  with
+    instrumentKey : InstrumentKey
+    description : Text
+    publicParty : Party
+  where
+    signatory instrumentKey.issuer
+    observer instrumentKey.depository, publicParty
+
+    key (instrumentKey.issuer, instrumentKey.id, instrumentKey.version) : (Party, Id, Text)
+    maintainer key._1
+
+    -- | Mint new holdings to a recipient account.
+    -- Both the issuer and the recipient must authorize.
+    nonconsuming choice Mint : ContractId Holding.I
+      with
+        amount : Decimal
+        recipientAccount : AccountKey
+      controller instrumentKey.issuer, recipientAccount.owner
+      do
+        assertMsg "Mint amount must be positive" (amount > 0.0)
+        Account.exerciseInterfaceByKey @Account.I recipientAccount recipientAccount.owner Account.Credit with
+          quantity = qty amount instrumentKey

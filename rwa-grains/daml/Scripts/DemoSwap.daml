@@ -1,0 +1,96 @@
+module Scripts.DemoSwap where
+
+import Daml.Script
+import DA.List (head)
+import DA.Foldable (forA_)
+
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), HoldingStandard(..), Id(..), InstrumentKey(..))
+import Daml.Finance.Holding.V4.TransferableFungible qualified as TransferableFungible (TransferableFungible)
+
+import Grain.SwapRequest (SwapRequest(..), Accept(..))
+import Scripts.Util (lookupParty)
+
+-- | Helper: query and print all holdings of a party.
+printHoldings : Text -> Party -> Script ()
+printHoldings label party = do
+  holdings <- query @TransferableFungible.TransferableFungible party
+  debug $ label <> " holdings:"
+  forA_ holdings $ \(_, h) ->
+    debug $ "  " <> show h.instrument.id <> ": " <> show h.amount
+
+-- | Demo script: Alice proposes swapping 10 WHEAT for 20 SOY with Bob, then Bob accepts.
+-- Run this after Scripts.Setup:setup has been executed.
+demoSwap = script do
+  -- Look up parties
+  warehouse <- lookupParty "Warehouse"
+  alice <- lookupParty "Alice"
+  bob <- lookupParty "Bob"
+
+  let aliceAccount = AccountKey with custodian = warehouse; owner = alice; id = Id "Alice@Warehouse"
+  let bobAccount = AccountKey with custodian = warehouse; owner = bob; id = Id "Bob@Warehouse"
+
+  let wheatKey = InstrumentKey with
+        issuer = warehouse; depository = warehouse; id = Id "WHEAT"; version = "0"
+        holdingStandard = TransferableFungible
+
+  let soyKey = InstrumentKey with
+        issuer = warehouse; depository = warehouse; id = Id "SOY"; version = "0"
+        holdingStandard = TransferableFungible
+
+  -- Query Alice's WHEAT holding and Bob's SOY holding
+  aliceWheatHoldings <- queryFilter @TransferableFungible.TransferableFungible alice
+    (\h -> h.instrument == wheatKey && h.account == aliceAccount)
+  assertMsg "Alice must have at least one WHEAT holding" (not $ null aliceWheatHoldings)
+  let (aliceWheatCid, _) = head aliceWheatHoldings
+  let aliceWheatHoldingCid = toInterfaceContractId @Holding.I aliceWheatCid
+
+  bobSoyHoldings <- queryFilter @TransferableFungible.TransferableFungible bob
+    (\h -> h.instrument == soyKey && h.account == bobAccount)
+  assertMsg "Bob must have at least one SOY holding" (not $ null bobSoyHoldings)
+  let (bobSoyCid, _) = head bobSoyHoldings
+  let bobSoyHoldingCid = toInterfaceContractId @Holding.I bobSoyCid
+
+  debug "=========================================="
+  debug "Starting atomic swap demo"
+  debug "  Alice offers: 10 WHEAT"
+  debug "  Alice wants:  20 SOY"
+  debug "=========================================="
+
+  debug "--- Before swap ---"
+  printHoldings "Alice" alice
+  printHoldings "Bob" bob
+
+  -- Alice creates the swap request
+  swapRequestCid <- submit alice do
+    createCmd SwapRequest with
+      proposer = alice
+      acceptor = bob
+      custodian = warehouse
+      offerInstrument = wheatKey
+      offerAmount = 10.0
+      offerHoldingCid = aliceWheatHoldingCid
+      proposerAccount = aliceAccount
+      askInstrument = soyKey
+      askAmount = 20.0
+      acceptorAccount = bobAccount
+
+  debug "SwapRequest created by Alice"
+
+  -- All three parties accept (atomic swap)
+  submitMulti [alice, bob, warehouse] [] do
+    exerciseCmd swapRequestCid Accept with
+      acceptorHoldingCid = bobSoyHoldingCid
+
+  debug "Swap executed atomically!"
+
+  -- Print final holdings
+  debug "--- After swap ---"
+  printHoldings "Alice" alice
+  printHoldings "Bob" bob
+
+  debug "=========================================="
+  debug "Swap demo complete!"
+  debug "=========================================="
+
+  pure ()
