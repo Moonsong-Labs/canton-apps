@@ -2,9 +2,9 @@
 
 Reference architecture for privacy-preserving DeFi on Canton Network. The implementation covers the full lifecycle: stablecoin issuance with programmable transfer restrictions, yield-generating vault deposits, and oracle price integration.
 
-## Demo
+## Watch the demo
 
-[![Watch the demo](https://img.youtube.com/vi/X4UWJ4OppTA/maxresdefault.jpg)](https://www.youtube.com/watch?v=X4UWJ4OppTA)
+<a href="https://www.youtube.com/watch?v=X4UWJ4OppTA"><img src="https://img.youtube.com/vi/X4UWJ4OppTA/maxresdefault.jpg" alt="Watch the demo" width="480"></a>
 
 ## Apps
 
