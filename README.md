@@ -1,6 +1,10 @@
 # canton-apps
 
-A monorepo for Canton/Daml applications.
+Reference architecture for privacy-preserving DeFi on Canton Network. The implementation covers the full lifecycle: stablecoin issuance with programmable transfer restrictions, yield-generating vault deposits, and oracle price integration.
+
+## Watch the demo
+
+<a href="https://www.youtube.com/watch?v=X4UWJ4OppTA"><img src="https://img.youtube.com/vi/X4UWJ4OppTA/maxresdefault.jpg" alt="Watch the demo" width="480"></a>
 
 ## Apps
 
