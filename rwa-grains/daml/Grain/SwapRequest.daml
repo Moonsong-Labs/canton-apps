@@ -1,0 +1,63 @@
+module Grain.SwapRequest where
+
+import DA.Assert ((===))
+
+import Daml.Finance.Interface.Holding.V4.Holding qualified as Holding (I)
+import Daml.Finance.Interface.Holding.V4.Util (getAmount, getInstrument)
+import Daml.Finance.Interface.Types.Common.V3.Types (AccountKey(..), InstrumentKey)
+
+import Holding.Transfer (splitAndTransfer)
+
+-- | An atomic swap proposal: the proposer offers some amount of one commodity
+-- in exchange for some amount of another commodity from the acceptor.
+-- When accepted, both legs execute in a single transaction (all-or-nothing).
+template SwapRequest
+  with
+    proposer : Party
+    acceptor : Party
+    custodian : Party
+    offerInstrument : InstrumentKey
+    offerAmount : Decimal
+    offerHoldingCid : ContractId Holding.I
+    proposerAccount : AccountKey
+    askInstrument : InstrumentKey
+    askAmount : Decimal
+    acceptorAccount : AccountKey
+  where
+    signatory proposer
+    observer acceptor, custodian
+
+    ensure offerAmount > 0.0 && askAmount > 0.0
+
+    -- | Accept the swap: the acceptor provides their holding and both transfers
+    -- execute atomically. Returns the two new holding CIDs
+    -- (proposer's new holding, acceptor's new holding).
+    choice Accept : (ContractId Holding.I, ContractId Holding.I)
+      with
+        acceptorHoldingCid : ContractId Holding.I
+      controller proposer, acceptor, custodian
+      do
+        -- Validate the proposer's offered holding
+        offerHolding <- fetch offerHoldingCid
+        getInstrument offerHolding === offerInstrument
+        assertMsg "Offered holding has insufficient amount" (getAmount offerHolding >= offerAmount)
+
+        -- Validate the acceptor's holding
+        askHolding <- fetch acceptorHoldingCid
+        getInstrument askHolding === askInstrument
+        assertMsg "Acceptor holding has insufficient amount" (getAmount askHolding >= askAmount)
+
+        let actors = [proposer, acceptor, custodian]
+
+        -- Leg 1: Transfer offerAmount from proposer -> acceptor
+        acceptorNewHoldingCid <- splitAndTransfer actors acceptorAccount offerAmount offerHoldingCid
+
+        -- Leg 2: Transfer askAmount from acceptor -> proposer
+        proposerNewHoldingCid <- splitAndTransfer actors proposerAccount askAmount acceptorHoldingCid
+
+        pure (proposerNewHoldingCid, acceptorNewHoldingCid)
+
+    -- | The proposer can cancel the swap request at any time before acceptance.
+    choice Cancel : ()
+      controller proposer
+      do pure ()

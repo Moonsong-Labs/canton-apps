@@ -1,0 +1,123 @@
+module Scripts.Setup where
+
+import Daml.Script
+import DA.Map qualified as Map (fromList)
+import DA.Set qualified as Set (fromList)
+
+import Daml.Finance.Interface.Account.V4.Factory qualified as AccountFactory (I)
+import Daml.Finance.Interface.Instrument.Token.V4.Factory qualified as TokenFactory (Create(..), I)
+import Daml.Finance.Interface.Instrument.Token.V4.Types (Token(..))
+import Daml.Finance.Interface.Types.Common.V3.Types (HoldingStandard(..), Id(..), InstrumentKey(..))
+
+import Daml.Finance.Account.V4.Account qualified as Account (Factory(..))
+import Daml.Finance.Holding.V4.Factory qualified as Holding (Factory(..))
+import Daml.Finance.Instrument.Token.V4.Factory qualified as Token (Factory(..))
+
+import Grain.CommodityToken (CommodityToken(..))
+import Grain.CommodityToken qualified
+import Scripts.Util (createHoldingFactory, getOrCreateParty, createCustodiedAccount)
+
+-- | Full setup: creates parties, factories, instruments, accounts,
+-- and mints initial WHEAT/SOY holdings to Alice and Bob.
+setup = script do
+  -- 1. Create parties
+  [warehouse, alice, bob, public] <- mapA getOrCreateParty ["Warehouse", "Alice", "Bob", "Public"]
+  debug $ "Parties created: Warehouse, Alice, Bob, Public"
+
+  -- 2. Create factories
+  accountFactoryCid <- toInterfaceContractId @AccountFactory.I <$> submit warehouse do
+    createCmd Account.Factory with
+      provider = warehouse
+      observers = mempty
+
+  holdingFactory <- createHoldingFactory
+    Holding.Factory with
+      provider = warehouse
+      id = Id "Grain Holding Factory"
+      observers = Map.fromList [("Traders", Set.fromList [alice, bob])]
+
+  tokenFactoryCid <- toInterfaceContractId @TokenFactory.I <$> submit warehouse do
+    createCmd Token.Factory with
+      provider = warehouse
+      observers = mempty
+
+  debug "Factories created: Account, Holding, Token"
+
+  -- 3. Create accounts
+  aliceAccount <- createCustodiedAccount warehouse holdingFactory accountFactoryCid alice "Alice@Warehouse" [bob]
+  bobAccount <- createCustodiedAccount warehouse holdingFactory accountFactoryCid bob "Bob@Warehouse" [alice]
+
+  debug $ "Accounts created: " <> show aliceAccount <> ", " <> show bobAccount
+
+  -- 4. Create WHEAT and SOY instruments
+  now <- getTime
+
+  let wheatKey = InstrumentKey with
+        issuer = warehouse
+        depository = warehouse
+        id = Id "WHEAT"
+        version = "0"
+        holdingStandard = TransferableFungible
+
+  let soyKey = InstrumentKey with
+        issuer = warehouse
+        depository = warehouse
+        id = Id "SOY"
+        version = "0"
+        holdingStandard = TransferableFungible
+
+  submit warehouse do
+    exerciseCmd tokenFactoryCid TokenFactory.Create with
+      token = Token with
+        instrument = wheatKey
+        description = "Wheat commodity token (tonnes)"
+        validAsOf = now
+      observers = mempty
+
+  submit warehouse do
+    exerciseCmd tokenFactoryCid TokenFactory.Create with
+      token = Token with
+        instrument = soyKey
+        description = "Soybean commodity token (tonnes)"
+        validAsOf = now
+      observers = mempty
+
+  debug "Instruments created: WHEAT, SOY"
+
+  -- 5. Create CommodityToken wrappers
+  wheatTokenCid <- submit warehouse do
+    createCmd CommodityToken with
+      instrumentKey = wheatKey
+      description = "Tokenized Wheat"
+      publicParty = public
+
+  soyTokenCid <- submit warehouse do
+    createCmd CommodityToken with
+      instrumentKey = soyKey
+      description = "Tokenized Soybean"
+      publicParty = public
+
+  debug "CommodityToken wrappers created for WHEAT and SOY"
+
+  -- 6. Mint initial holdings
+  aliceWheatCid <- submitMulti [warehouse, alice] [] do
+    exerciseCmd wheatTokenCid Grain.CommodityToken.Mint with
+      amount = 100.0
+      recipientAccount = aliceAccount
+
+  bobSoyCid <- submitMulti [warehouse, bob] [] do
+    exerciseCmd soyTokenCid Grain.CommodityToken.Mint with
+      amount = 200.0
+      recipientAccount = bobAccount
+
+  debug "Minted 100 WHEAT to Alice"
+  debug "Minted 200 SOY to Bob"
+
+  debug "=========================================="
+  debug "RWA Grains setup complete!"
+  debug "  - Instruments: WHEAT, SOY"
+  debug "  - Alice holds 100 WHEAT"
+  debug "  - Bob holds 200 SOY"
+  debug "=========================================="
+
+  pure ()

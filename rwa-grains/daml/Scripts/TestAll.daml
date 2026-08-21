@@ -1,0 +1,11 @@
+module Scripts.TestAll where
+
+import Daml.Script
+import Scripts.Setup (setup)
+import Scripts.DemoSwap (demoSwap)
+
+-- | Combined script: runs setup then the swap demo.
+-- Useful for quick end-to-end testing with `daml script --ide-ledger`.
+testAll = script do
+  setup
+  demoSwap
